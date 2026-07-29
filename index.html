@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TinyDose — מחשבון מינונים</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
+</head>
+<body>
+
+<div class="dev-banner">🚧 האתר בשלב פיתוח — אין להשתמש בו להחלטות רפואיות בשלב זה 🚧</div>
+
+<header class="app-header">
+  <a href="index.html" class="logo">
+    <div class="logo-icon">💊</div>
+    <div>
+      <div class="logo-text">TinyDose</div>
+      <div class="logo-sub">מינונים לילדים</div>
+    </div>
+  </a>
+</header>
+
+<main>
+  <div class="disclaimer">
+    ⚕️ <strong>לשימוש רפואי בלבד.</strong> המינונים מבוססים על ספרות מוכרת ומיועדים לרופאים. יש לאמת מול מקורות עדכניים ולהתאים לכל מטופל בנפרד.
+  </div>
+
+  <!-- Search — always visible -->
+  <div class="card">
+    <div class="card-title">🔍 חפש אינדיקציה או תרופה</div>
+    <div class="field" style="margin-bottom:0;">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="הקלד שם תרופה, אינדיקציה..." autocomplete="off" disabled>
+        <div class="search-results hidden" id="search-results"></div>
+      </div>
+    </div>
+    <p style="font-size:.8rem;color:var(--gray-400);margin-top:8px;margin-bottom:0;" id="search-hint">טוען מאגר תרופות...</p>
+  </div>
+
+  <!-- Drug overview panel (shown when user taps a drug name in search) -->
+  <div id="drug-overview" class="card hidden">
+    <button id="drug-overview-close" class="btn btn-ghost btn-sm" style="margin-bottom:14px;">← חזרה לחיפוש</button>
+    <div id="drug-overview-content"></div>
+  </div>
+
+  <!-- Categories -->
+  <div id="categories-section">
+    <div style="font-size:.85rem;font-weight:600;color:var(--gray-500);text-align:center;margin:18px 0 10px;">— או בחר לפי תחום קליני —</div>
+    <div class="shortcuts-grid" id="categories-grid">
+      <div class="loading-wrap" style="grid-column:1/-1;"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- Free calculation -->
+  <div class="card" style="text-align:center;">
+    <p style="font-size:.85rem;color:var(--gray-500);margin-bottom:10px;">תרופה שאינה במאגר?</p>
+    <a href="calculator.html?mode=free" class="btn btn-ghost btn-sm">✏️ חישוב חופשי</a>
+  </div>
+</main>
+
+<footer>
+  <div>⚠️ כלי עזר לרופאים בלבד — אינו מחליף שיקול דעת קליני</div>
+  <div style="margin-top:6px;">
+    פותח ע"י <strong>ד"ר אורי דביר</strong> | רופא משפחה, קופ"ח כללית<br>
+    <a href="mailto:Dr.OriDevir@gmail.com">Dr.OriDevir@gmail.com</a>
+    &nbsp;|&nbsp;
+    <a href="admin.html" style="color:var(--gray-300);">ניהול</a>
+  </div>
+</footer>
+
+<script type="module">
+import { supabase, esc } from './app.js';
+
+// ── Search data ──
+let allIndications = [];
+let drugMap = new Map();
+let dataLoaded = false;
+
+async function loadSearchData() {
+  const { data, error } = await supabase
+    .from('indications')
+    .select('id, name_he, name_en, medications(id, drug_name, concentration_label, dose_min_mg_per_kg_day, dose_max_mg_per_kg_day)');
+
+  const input = document.getElementById('search-input');
+  const hint = document.getElementById('search-hint');
+
+  if (error) {
+    hint.textContent = 'שגיאה בטעינת המאגר — נסה לרענן את הדף';
+    return;
+  }
+
+  allIndications = data || [];
+  drugMap = new Map();
+  allIndications.forEach(ind => {
+    (ind.medications || []).forEach(med => {
+      if (!drugMap.has(med.drug_name)) drugMap.set(med.drug_name, []);
+      drugMap.get(med.drug_name).push({
+        medId: med.id,
+        concentrationLabel: med.concentration_label,
+        doseMin: med.dose_min_mg_per_kg_day,
+        doseMax: med.dose_max_mg_per_kg_day,
+        indHe: ind.name_he,
+      });
+    });
+  });
+
+  dataLoaded = true;
+  input.disabled = false;
+  hint.textContent = 'ניתן לחפש בעברית או באנגלית';
+}
+
+// ── Search rendering ──
+function renderSearchResults(query) {
+  const box = document.getElementById('search-results');
+  if (!query.trim()) { box.classList.add('hidden'); return; }
+
+  const q = query.toLowerCase();
+
+  const indMatches = allIndications.filter(ind =>
+    (ind.name_he || '').includes(q) ||
+    (ind.name_en || '').toLowerCase().includes(q)
+  ).slice(0, 8);
+
+  const drugMatches = [];
+  for (const [drugName] of drugMap) {
+    if (drugName.toLowerCase().includes(q)) {
+      drugMatches.push(drugName);
+      if (drugMatches.length >= 4) break;
+    }
+  }
+
+  if (!indMatches.length && !drugMatches.length) {
+    box.innerHTML = '<div class="search-result-item" style="color:var(--gray-400);">לא נמצאו תוצאות</div>';
+    box.classList.remove('hidden');
+    return;
+  }
+
+  let html = '';
+
+  if (indMatches.length) {
+    html += '<div class="search-group-header">📋 אינדיקציות</div>';
+    html += indMatches.map(ind => `
+      <div class="search-result-item" data-indication-id="${esc(ind.id)}">
+        <div class="drug">${esc(ind.name_he)}</div>
+        ${ind.name_en ? `<div class="indication">${esc(ind.name_en)}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  if (drugMatches.length) {
+    html += '<div class="search-group-header">💊 תרופות</div>';
+    html += drugMatches.map(drugName => {
+      const count = drugMap.get(drugName).length;
+      return `
+        <div class="search-result-item" data-drug-name="${esc(drugName)}">
+          <div class="drug">${esc(drugName)}</div>
+          <div class="indication">${count} ${count === 1 ? 'רישום' : 'רישומים'}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  box.innerHTML = html;
+
+  box.querySelectorAll('[data-indication-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      location.href = `calculator.html?indication=${encodeURIComponent(el.getAttribute('data-indication-id'))}`;
+    });
+  });
+
+  box.querySelectorAll('[data-drug-name]').forEach(el => {
+    el.addEventListener('click', () => {
+      box.classList.add('hidden');
+      document.getElementById('search-input').value = '';
+      showDrugOverview(el.getAttribute('data-drug-name'));
+    });
+  });
+
+  box.classList.remove('hidden');
+}
+
+// ── Drug overview panel ──
+function showDrugOverview(drugName) {
+  const entries = drugMap.get(drugName) || [];
+  const panel = document.getElementById('drug-overview');
+  const content = document.getElementById('drug-overview-content');
+
+  content.innerHTML = `
+    <div class="card-title">💊 ${esc(drugName)}</div>
+    <p style="font-size:.82rem;color:var(--gray-500);margin-bottom:12px;">בחר אינדיקציה לחישוב מינון:</p>
+    ${entries.map(e => {
+      const doseStr = (e.doseMax != null && e.doseMax !== e.doseMin)
+        ? `${e.doseMin}–${e.doseMax}`
+        : `${e.doseMin}`;
+      return `
+        <a href="calculator.html?id=${esc(e.medId)}" class="shortcut-btn"
+           style="display:block;width:100%;text-align:right;margin-bottom:8px;text-decoration:none;padding:12px 14px;">
+          <div class="drug-name">${esc(e.indHe)}</div>
+          <div class="indication">${doseStr} מ"ג/ק"ג/יום${e.concentrationLabel ? ` · ${esc(e.concentrationLabel)}` : ''}</div>
+        </a>
+      `;
+    }).join('')}
+  `;
+
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+document.getElementById('drug-overview-close').addEventListener('click', () => {
+  document.getElementById('drug-overview').classList.add('hidden');
+});
+
+document.getElementById('search-input').addEventListener('input', e => {
+  if (!dataLoaded) return;
+  renderSearchResults(e.target.value);
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrap')) {
+    document.getElementById('search-results').classList.add('hidden');
+  }
+});
+
+// ── Categories ──
+async function loadCategories() {
+  const [catsResult, uncatResult] = await Promise.all([
+    supabase.from('categories').select('*').order('sort_order'),
+    supabase.from('indications').select('*', { count: 'exact', head: true }).is('category_id', null),
+  ]);
+
+  const cats = catsResult.data || [];
+  const hasUncategorized = !uncatResult.error && (uncatResult.count || 0) > 0;
+
+  const grid = document.getElementById('categories-grid');
+
+  if (!cats.length && !hasUncategorized) {
+    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--gray-400);padding:20px;">אין קטגוריות מוגדרות</p>';
+    return;
+  }
+
+  const items = [
+    ...cats.map(c => ({ id: c.id, name: c.name_he, sub: c.name_en || '' })),
+    ...(hasUncategorized ? [{ id: 'none', name: 'כללי / לא ממוין', sub: '' }] : []),
+  ];
+
+  grid.innerHTML = items.map(c => `
+    <button class="shortcut-btn" data-cat-id="${esc(c.id)}">
+      <div class="drug-name">${esc(c.name)}</div>
+      ${c.sub ? `<div class="indication">${esc(c.sub)}</div>` : ''}
+    </button>
+  `).join('');
+
+  grid.querySelectorAll('[data-cat-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      location.href = `calculator.html?category=${encodeURIComponent(btn.getAttribute('data-cat-id'))}`;
+    });
+  });
+}
+
+loadSearchData();
+loadCategories();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TinyDose — ניהול</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="dev-banner">🚧 האתר בשלב פיתוח — אין להשתמש בו להחלטות רפואיות בשלב זה 🚧</div>
+
+<!-- Login screen -->
+<div id="login-screen">
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1>💊 TinyDose</h1>
+      <p class="sub">כניסה לממשק ניהול</p>
+      <div class="field">
+        <label>אימייל</label>
+        <input type="email" id="login-email" placeholder="dr@example.com" dir="ltr">
+      </div>
+      <div class="field">
+        <label>סיסמה</label>
+        <input type="password" id="login-password" placeholder="••••••••" dir="ltr">
+      </div>
+      <div id="login-error" style="color:var(--danger);font-size:.85rem;margin-bottom:12px;display:none;"></div>
+      <button class="btn btn-primary btn-full" onclick="doLogin()" id="login-btn">כניסה</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin app -->
+<div id="admin-app" class="hidden">
+  <header class="app-header">
+    <a href="index.html" class="logo">
+      <div class="logo-icon">💊</div>
+      <div>
+        <div class="logo-text">TinyDose</div>
+        <div class="logo-sub">ניהול</div>
+      </div>
+    </a>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="admin-email" style="font-size:.8rem;color:var(--gray-500);"></span>
+      <button class="btn btn-secondary btn-sm" onclick="doLogout()">יציאה</button>
+    </div>
+  </header>
+
+  <main class="admin-layout" style="padding:16px;max-width:960px;margin:0 auto;">
+
+    <!-- Admin tabs -->
+    <div class="mode-tabs" style="margin-bottom:16px;">
+      <button class="mode-tab active" onclick="showAdminTab('meds')" id="admin-tab-meds">💊 תרופות</button>
+      <button class="mode-tab" onclick="showAdminTab('indications')" id="admin-tab-indications">🩺 אינדיקציות</button>
+      <button class="mode-tab" onclick="showAdminTab('cats')" id="admin-tab-cats">🏷️ קטגוריות</button>
+    </div>
+
+    <!-- ── Medications section ── -->
+    <div id="admin-section-meds">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="font-size:1.2rem;font-weight:700;">תרופות ומינונים</h2>
+        <button class="btn btn-primary" onclick="openModal()">+ הוסף תרופה</button>
+      </div>
+
+      <div class="card" style="padding:12px 16px;margin-bottom:12px;">
+        <input type="text" id="filter-input" placeholder="סנן לפי שם תרופה / אינדיקציה..." oninput="filterTable()">
+      </div>
+
+      <div class="card" style="padding:0;">
+        <div class="table-wrap">
+          <table class="admin-table" id="meds-table">
+            <thead>
+              <tr>
+                <th>אינדיקציה</th>
+                <th>תרופה</th>
+                <th>מינון (מ"ג/ק"ג/י)</th>
+                <th>ריכוז</th>
+                <th>פעמים/י</th>
+                <th>מקסימום</th>
+                <th>קטגוריה</th>
+                <th>פעולות</th>
+              </tr>
+            </thead>
+            <tbody id="meds-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--gray-400);">
+                <div class="spinner"></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Indications section ── -->
+    <div id="admin-section-indications" class="hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="font-size:1.2rem;font-weight:700;">אינדיקציות</h2>
+        <button class="btn btn-primary" onclick="openIndicationModal()">+ הוסף אינדיקציה</button>
+      </div>
+
+      <div class="card" style="padding:0;">
+        <div class="table-wrap">
+          <table class="admin-table" id="indications-table">
+            <thead>
+              <tr>
+                <th>שם (עברית)</th>
+                <th>שם (אנגלית)</th>
+                <th>קטגוריה</th>
+                <th>פעולות</th>
+              </tr>
+            </thead>
+            <tbody id="indications-tbody">
+              <tr><td colspan="4" style="text-align:center;padding:30px;color:var(--gray-400);">
+                <div class="spinner"></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Categories section ── -->
+    <div id="admin-section-cats" class="hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="font-size:1.2rem;font-weight:700;">קטגוריות</h2>
+        <button class="btn btn-primary" onclick="openCatModal()">+ הוסף קטגוריה</button>
+      </div>
+
+      <div class="card" style="padding:0;">
+        <div class="table-wrap">
+          <table class="admin-table" id="cats-table">
+            <thead>
+              <tr>
+                <th>שם (עברית)</th>
+                <th>שם (אנגלית)</th>
+                <th>סדר</th>
+                <th>פעולות</th>
+              </tr>
+            </thead>
+            <tbody id="cats-tbody">
+              <tr><td colspan="4" style="text-align:center;padding:30px;color:var(--gray-400);">
+                <div class="spinner"></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modal: Add/Edit Medication -->
+<div class="modal-overlay hidden" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">הוסף תרופה</div>
+    <form id="med-form" onsubmit="saveMed(event)">
+      <input type="hidden" id="f-id">
+      <div class="form-grid">
+
+        <!-- Indication select + inline create -->
+        <div class="field full">
+          <label>אינדיקציה *</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="f-indication-id" style="flex:1;" required>
+              <option value="">— בחר אינדיקציה —</option>
+            </select>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleNewIndicationForm()">＋ חדשה</button>
+          </div>
+          <!-- Inline create indication -->
+          <div id="new-indication-form" class="hidden" style="border:1px solid var(--gray-200);border-radius:8px;padding:12px;margin-top:8px;background:var(--gray-50);">
+            <div style="font-size:.85rem;font-weight:600;margin-bottom:8px;color:var(--gray-700);">אינדיקציה חדשה</div>
+            <div class="form-grid">
+              <div class="field full">
+                <label>שם (עברית) *</label>
+                <input type="text" id="ni-name-he" placeholder="לדוגמה: אוטיטיס מדיה">
+              </div>
+              <div class="field full">
+                <label>שם (אנגלית)</label>
+                <input type="text" id="ni-name-en" placeholder="e.g. Otitis Media" dir="ltr">
+              </div>
+              <div class="field full">
+                <label>קטגוריה</label>
+                <select id="ni-category-id">
+                  <option value="">ללא קטגוריה (כללי)</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="saveNewIndication()">צור אינדיקציה</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="toggleNewIndicationForm()">ביטול</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field full">
+          <label>שם תרופה *</label>
+          <input type="text" id="f-drug" required placeholder="דוג׳ אמוקסיצילין">
+        </div>
+        <div class="field full">
+          <label>קטגוריה</label>
+          <select id="f-category-id">
+            <option value="">ללא קטגוריה (כללי)</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>תווית ריכוז (לזיהוי תכשיר)</label>
+          <input type="text" id="f-concentration-label" placeholder="דוג׳ 250mg/5ml" dir="ltr">
+          <p style="font-size:.75rem;color:var(--gray-400);margin-top:4px;">משמש להבחנה אם אותה תרופה קיימת בכמה ריכוזים שונים</p>
+        </div>
+        <div class="field">
+          <label>מינון מינימום (מ"ג/ק"ג/יום) *</label>
+          <input type="number" id="f-dose-min" required min="0" step="any" dir="ltr">
+        </div>
+        <div class="field">
+          <label>מינון מקסימום (מ"ג/ק"ג/יום)</label>
+          <input type="number" id="f-dose-max" min="0" step="any" dir="ltr" placeholder="ריק = מינון קבוע">
+        </div>
+        <div class="field">
+          <label>ריכוז (מ"ג/מ"ל) *</label>
+          <input type="number" id="f-concentration" required min="0" step="any" dir="ltr">
+        </div>
+        <div class="field">
+          <label>מנות ביום *</label>
+          <input type="number" id="f-doses-per-day" required min="1" max="6" step="1" dir="ltr">
+        </div>
+        <div class="field">
+          <label>משך טיפול (ימים)</label>
+          <input type="number" id="f-duration-days" min="1" step="1" dir="ltr" placeholder="לא חובה">
+        </div>
+        <div class="field full">
+          <label>מינון מקסימום יומי מוחלט (מ"ג) *</label>
+          <input type="number" id="f-max-daily" required min="0" step="any" dir="ltr">
+        </div>
+        <div class="field full">
+          <label>מינון מקסימלי יומי למבוגר (מ"ג)</label>
+          <input type="number" id="f-adult-max-daily" min="0" step="any" dir="ltr" placeholder="לא חובה — מאפשר חישוב מ&quot;ל אוטומטי בעת חריגה">
+          <p style="font-size:.75rem;color:var(--gray-400);margin-top:4px;">המערכת תחשב את נפח המבוגרים באותו ריכוז ומספר מנות כמו הילדים</p>
+        </div>
+        <div class="field full">
+          <label>הערת מינון מבוגר (טקסט חופשי נוסף)</label>
+          <input type="text" id="f-adult-note" placeholder="לדוגמה: תכשיר מבוגרים שונה (כדורים)">
+        </div>
+        <div class="field full">
+          <label>הערות קליניות</label>
+          <textarea id="f-notes" rows="2" placeholder="הערות נוספות לרופא..."></textarea>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div id="preview-area"></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;margin-top:8px;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="previewCalc()">👁️ תצוגה מקדימה</button>
+        <input type="number" id="preview-weight" placeholder="משקל לדוגמה" min="1" max="120" step="0.5" style="width:130px;" dir="ltr">
+        <span style="font-size:.85rem;color:var(--gray-500);line-height:2.2;">ק"ג</span>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">ביטול</button>
+        <button type="submit" class="btn btn-primary" id="save-btn">שמור</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Add/Edit Indication -->
+<div class="modal-overlay hidden" id="indication-modal-overlay" onclick="if(event.target===this)closeIndicationModal()">
+  <div class="modal">
+    <div class="modal-title" id="indication-modal-title">הוסף אינדיקציה</div>
+    <form id="indication-form" onsubmit="saveIndication(event)">
+      <input type="hidden" id="if-id">
+      <div class="form-grid">
+        <div class="field full">
+          <label>שם אינדיקציה (עברית) *</label>
+          <input type="text" id="if-name-he" required placeholder="לדוגמה: אוטיטיס מדיה">
+        </div>
+        <div class="field full">
+          <label>שם אינדיקציה (אנגלית)</label>
+          <input type="text" id="if-name-en" placeholder="e.g. Otitis Media" dir="ltr">
+        </div>
+        <div class="field full">
+          <label>קטגוריה</label>
+          <select id="if-category-id">
+            <option value="">ללא קטגוריה (כללי)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeIndicationModal()">ביטול</button>
+        <button type="submit" class="btn btn-primary" id="indication-save-btn">שמור</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Add/Edit Category -->
+<div class="modal-overlay hidden" id="cat-modal-overlay" onclick="if(event.target===this)closeCatModal()">
+  <div class="modal">
+    <div class="modal-title" id="cat-modal-title">הוסף קטגוריה</div>
+    <form id="cat-form" onsubmit="saveCat(event)">
+      <input type="hidden" id="cf-id">
+      <div class="form-grid">
+        <div class="field full">
+          <label>שם קטגוריה (עברית) *</label>
+          <input type="text" id="cf-name-he" required placeholder="לדוגמה: נשימתי">
+        </div>
+        <div class="field full">
+          <label>שם קטגוריה (אנגלית)</label>
+          <input type="text" id="cf-name-en" placeholder="e.g. Respiratory" dir="ltr">
+        </div>
+        <div class="field full">
+          <label>סדר תצוגה</label>
+          <input type="number" id="cf-sort-order" min="0" step="1" dir="ltr" value="0">
+          <p style="font-size:.75rem;color:var(--gray-400);margin-top:4px;">מספר נמוך יותר = מוצג קודם</p>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeCatModal()">ביטול</button>
+        <button type="submit" class="btn btn-primary" id="cat-save-btn">שמור</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>
