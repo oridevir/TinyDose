@@ -397,20 +397,10 @@ function renderResult(med, weight) {
     indicationHe: indication_he,
     indicationEn: indication_en,
     weight,
-    doseStepHtml: `
-      <div class="calc-step">
-        <span class="label">Patient weight</span>
-        <span class="value">${weight} ק"ג</span>
-      </div>
-      <div class="calc-step">
-        <span class="label">Dose</span>
-        <span class="value">${doseStr} מ"ג/ק"ג/יום</span>
-      </div>
-      <div class="calc-step">
-        <span class="label">Calculated daily dose</span>
-        <span class="value">${weight} × ${doseStr} = ${dailyStr}</span>
-      </div>
-    `,
+    steps: [
+      { label: 'שלב א׳ — משקל הילד', value: `${weight} ק"ג` },
+      { label: 'שלב ב׳ — מינון יומי', value: `${weight} ק"ג × ${doseStr} מ"ג/ק"ג/יום = ${dailyStr} ליום` },
+    ],
     calc,
     dosesPerDay: doses_per_day,
     durationDays: duration_days,
@@ -430,7 +420,7 @@ function renderFreeForm() {
     <div class="card">
       <div class="card-title">חישוב חופשי</div>
       <div class="field">
-        <label>שם התרופה *</label>
+        <label>שם התרופה</label>
         <input type="text" id="ff-drug" placeholder="לדוגמה: אמוקסיצילין">
       </div>
       <div class="field">
@@ -442,8 +432,18 @@ function renderFreeForm() {
         <p style="font-size:.78rem;color:var(--gray-400);margin-top:4px;">השאר ריק אם המינון קבוע ולא טווח</p>
       </div>
       <div class="field">
-        <label>ריכוז התרופה בסירופ (מ"ג/מ"ל) *</label>
-        <input type="number" id="ff-conc" min="0" step="any" dir="ltr">
+        <label>ריכוז התרופה בסירופ *</label>
+        <div class="conc-row">
+          <div class="field" style="margin-bottom:0;">
+            <label for="ff-conc-mg">מ"ג</label>
+            <input type="number" id="ff-conc-mg" min="0" step="any" dir="ltr">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label for="ff-conc-ml">מ"ל</label>
+            <input type="number" id="ff-conc-ml" min="0" step="any" dir="ltr">
+          </div>
+        </div>
+        <p id="ff-conc-result" class="conc-computed"></p>
       </div>
       <div class="field">
         <label>מספר מנות ביום *</label>
@@ -465,24 +465,37 @@ function renderFreeForm() {
     <div id="result-area"></div>
   `;
 
+  const concMgInput = document.getElementById('ff-conc-mg');
+  const concMlInput = document.getElementById('ff-conc-ml');
+  const concResultEl = document.getElementById('ff-conc-result');
+  const updateConcDisplay = () => {
+    const mg = parseFloat(concMgInput.value);
+    const ml = parseFloat(concMlInput.value);
+    concResultEl.textContent = (mg > 0 && ml > 0) ? `= ${round2(mg / ml)} מ"ג למ"ל` : '';
+  };
+  concMgInput.addEventListener('input', updateConcDisplay);
+  concMlInput.addEventListener('input', updateConcDisplay);
+
   document.getElementById('ff-calc-btn').addEventListener('click', () => {
     const drugName = document.getElementById('ff-drug').value.trim();
     const doseMin = parseFloat(document.getElementById('ff-dose-min').value);
     const doseMaxRaw = document.getElementById('ff-dose-max').value;
     const doseMax = doseMaxRaw ? parseFloat(doseMaxRaw) : null;
-    const conc = parseFloat(document.getElementById('ff-conc').value);
+    const concMg = parseFloat(concMgInput.value);
+    const concMl = parseFloat(concMlInput.value);
     const dosesPerDay = parseInt(document.getElementById('ff-doses').value);
     const maxDailyRaw = document.getElementById('ff-maxdaily').value;
     const maxDailyDoseMg = maxDailyRaw ? parseFloat(maxDailyRaw) : null;
     const weight = parseFloat(document.getElementById('ff-weight').value);
 
-    if (!drugName) { showToast('יש להזין שם תרופה'); return; }
     if (!doseMin || doseMin <= 0) { showToast('יש להזין מינון תקין'); return; }
-    if (!conc || conc <= 0) { showToast('יש להזין ריכוז תקין'); return; }
+    if (!concMg || concMg <= 0) { showToast('יש להזין מ"ג תקין'); return; }
+    if (!concMl || concMl <= 0) { showToast('יש להזין מ"ל תקין'); return; }
     if (!dosesPerDay || dosesPerDay <= 0) { showToast('יש להזין מספר מנות ביום'); return; }
     if (!weight || weight <= 0) { showToast('יש להזין משקל תקין'); return; }
     if (doseMax != null && doseMax < doseMin) { showToast('מינון מקסימום קטן ממינימום'); return; }
 
+    const conc = round2(concMg / concMl);
     renderFreeResult({ drugName, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight });
   });
 }
@@ -500,25 +513,17 @@ function renderFreeResult({ drugName, doseMin, doseMax, conc, dosesPerDay, maxDa
   const freqMap = { 1: 'פעם ביום', 2: 'פעמיים ביום', 3: 'שלוש פעמים ביום', 4: 'ארבע פעמים ביום' };
   const freqStr = freqMap[dosesPerDay] || `${dosesPerDay} פעמים ביום`;
 
+  const displayName = drugName || 'חישוב מינון';
+
   renderResultArea({
-    drugName,
+    drugName: displayName,
     indicationHe: 'חישוב חופשי',
     indicationEn: null,
     weight,
-    doseStepHtml: `
-      <div class="calc-step">
-        <span class="label">Patient weight</span>
-        <span class="value">${weight} ק"ג</span>
-      </div>
-      <div class="calc-step">
-        <span class="label">Dose entered</span>
-        <span class="value">${doseStr} מ"ג/ק"ג/יום</span>
-      </div>
-      <div class="calc-step">
-        <span class="label">Calculated daily dose</span>
-        <span class="value">${weight} × ${doseStr} = ${dailyStr}</span>
-      </div>
-    `,
+    steps: [
+      { label: 'שלב א׳ — משקל הילד', value: `${weight} ק"ג` },
+      { label: 'שלב ב׳ — מינון יומי', value: `${weight} ק"ג × ${doseStr} מ"ג/ק"ג/יום = ${dailyStr} ליום` },
+    ],
     calc,
     dosesPerDay,
     durationDays: null,
@@ -533,12 +538,19 @@ function renderFreeResult({ drugName, doseMin, doseMax, conc, dosesPerDay, maxDa
 
 // ── Shared result-area renderer for BOTH flows ──
 function renderResultArea({
-  drugName, indicationHe, indicationEn, weight, doseStepHtml,
+  drugName, indicationHe, indicationEn, weight, steps,
   calc, dosesPerDay, durationDays, freqStr, concentration, maxDailyDoseMg,
   adultDoseNote, catalogNotes, freeMode
 }) {
   const resultArea = document.getElementById('result-area');
   const durationStr = durationDays ? `${durationDays} ימים` : null;
+
+  const stepHtml = s => `
+    <div class="calc-step">
+      <div class="step-label">${esc(s.label)}</div>
+      <div class="step-value">${esc(s.value)}</div>
+    </div>
+  `;
 
   // ── EXCEEDED CASE: do not show a weight-based ml result at all.
   // Show the adult-dose fallback as the primary, final answer instead.
@@ -594,7 +606,7 @@ function renderResultArea({
           <div class="result-indication">${esc(indicationHe)}${indicationEn ? ' · ' + esc(indicationEn) : ''}</div>
         </div>
         <div class="result-body">
-          ${doseStepHtml}
+          ${steps.map(stepHtml).join('')}
           ${adultBlockHtml}
         </div>
       </div>
@@ -612,6 +624,16 @@ function renderResultArea({
     : `${calc.volMin} מ"ל`;
   const volDisplay = `<span class="highlight">${volStr}</span>`;
 
+  const dailyNumStr = calc.hasRange && calc.dailyMin !== calc.dailyMax
+    ? `${calc.dailyMin}–${calc.dailyMax}`
+    : `${calc.dailyMin}`;
+
+  const allSteps = [
+    ...steps,
+    { label: 'שלב ג׳ — מינון לכל מנה', value: `${dailyNumStr} מ"ג ÷ ${dosesPerDay} מנות = ${perDoseStr} למנה` },
+    { label: 'שלב ד׳ — נפח לכל מנה', value: `${perDoseStr} ÷ ${concentration} מ"ג/מ"ל = ${volStr} למנה` },
+  ];
+
   const freeWarningHtml = freeMode ? `
     <div class="warning-box" style="background:var(--danger-light);border-color:#fecaca;color:var(--danger);">
       <span class="warn-icon">⛔</span>
@@ -625,15 +647,7 @@ function renderResultArea({
         <div class="result-indication">${esc(indicationHe)}${indicationEn ? ' · ' + esc(indicationEn) : ''}</div>
       </div>
       <div class="result-body">
-        ${doseStepHtml}
-        <div class="calc-step">
-          <span class="label">Dose per administration</span>
-          <span class="value">${calc.hasRange && calc.dailyMin !== calc.dailyMax ? `${calc.dailyMin}–${calc.dailyMax}` : calc.dailyMin} מ"ג ÷ ${dosesPerDay} = ${perDoseStr}</span>
-        </div>
-        <div class="calc-step">
-          <span class="label">Volume per administration</span>
-          <span class="value">${perDoseStr} ÷ ${concentration} מ"ג/מ"ל = ${volStr}</span>
-        </div>
+        ${allSteps.map(stepHtml).join('')}
 
         ${freeWarningHtml}
 
@@ -662,17 +676,16 @@ function renderResultArea({
   document.getElementById('share-btn').addEventListener('click', () => {
     const doctorNotes = document.getElementById('doctor-notes').value.trim();
     const shareText =
-      `💊 TinyDose\n` +
-      `תרופה: ${drugName}\n` +
-      (indicationHe ? `אינדיקציה: ${indicationHe}\n` : '') +
-      `משקל: ${weight} ק"ג\n` +
+      `💊 ${drugName}\n` +
+      (indicationHe && !freeMode ? `${indicationHe}\n` : '') +
       `────────────\n` +
-      `מינון: ${volStr} — ${freqStr}\n` +
-      (durationStr ? `משך טיפול: ${durationStr}\n` : '') +
-      `ריכוז: ${concentration} מ"ג/מ"ל\n` +
-      (catalogNotes ? `הערה קלינית: ${catalogNotes}\n` : '') +
-      (doctorNotes ? `הערה: ${doctorNotes}\n` : '') +
-      `\nלחישוב נוסף: https://tinydose.drdevir.com`;
+      `מינון: ${perDoseStr} למנה\n` +
+      `נפח: ${volStr} למנה\n` +
+      `תדירות: ${freqStr}\n` +
+      (durationStr ? `למשך ${durationStr}\n` : '') +
+      (doctorNotes ? `${doctorNotes}\n` : '') +
+      `────────────\n` +
+      `tinydose.drdevir.com`;
 
     if (navigator.share) {
       navigator.share({ title: 'TinyDose', text: shareText }).catch(() => {});
@@ -684,63 +697,91 @@ function renderResultArea({
   document.getElementById('print-btn').addEventListener('click', () => {
     const doctorNotes = document.getElementById('doctor-notes').value.trim();
 
-    // Build the print document via DOM APIs instead of document.write() with
-    // a literal HTML string. This avoids two real-world issues:
-    // (1) dev servers like VS Code's "Live Server" inject their own reload
-    //     snippet right before the closing tag of every page they serve —
-    //     and have been observed to do this even inside text sitting in a
-    //     JS template literal, corrupting it and breaking the surrounding
-    //     script block.
-    // (2) document.write is increasingly restricted by browsers.
+    // Build the print document via DOM APIs (createElement/textContent) rather
+    // than document.write(). Note: window.open('', '_blank') already returns a
+    // document with a ready-made html/head/body structure — a subsequent
+    // doc.open() call throws that away, leaving doc.head/doc.body null and
+    // breaking every appendChild below. Don't call doc.open()/close().
     const printWin = window.open('', '_blank');
+    if (!printWin) { showToast('אנא אפשר חלונות קופצים כדי להדפיס'); return; }
     const doc = printWin.document;
-    doc.open();
     doc.title = 'TinyDose';
+    doc.documentElement.setAttribute('dir', 'rtl');
+
     const style = doc.createElement('style');
     style.textContent =
       'body{font-family:Arial,sans-serif;padding:20px;direction:rtl;}' +
       'h2{margin-bottom:4px;} p{margin:4px 0;font-size:14px;}' +
       '.box{border:1px solid #ccc;padding:12px;border-radius:8px;margin:12px 0;}' +
+      '.step{margin:8px 0;}' +
+      '.step-label{font-size:12px;font-weight:bold;color:#2563eb;}' +
+      '.step-value{font-size:14px;}' +
       '.big{font-size:1.3em;font-weight:bold;color:#2563eb;}';
     doc.head.appendChild(style);
-    doc.documentElement.setAttribute('dir', 'rtl');
 
     const body = doc.body;
+
     const h2 = doc.createElement('h2');
-    h2.textContent = '💊 TinyDose — ' + drugName;
+    h2.textContent = '💊 ' + drugName;
     body.appendChild(h2);
 
-    const pIndication = doc.createElement('p');
-    pIndication.textContent = indicationHe;
-    body.appendChild(pIndication);
+    if (indicationHe) {
+      const pIndication = doc.createElement('p');
+      pIndication.textContent = indicationHe;
+      body.appendChild(pIndication);
+    }
 
-    const box = doc.createElement('div');
-    box.className = 'box';
+    const pWeight = doc.createElement('p');
+    pWeight.textContent = `משקל הילד: ${weight} ק"ג`;
+    body.appendChild(pWeight);
 
-    const addLine = (text, big) => {
-      const p = doc.createElement('p');
-      if (big) p.className = 'big';
-      p.textContent = text;
-      box.appendChild(p);
-    };
+    const stepsBox = doc.createElement('div');
+    stepsBox.className = 'box';
+    allSteps.forEach(s => {
+      const stepDiv = doc.createElement('div');
+      stepDiv.className = 'step';
+      const label = doc.createElement('div');
+      label.className = 'step-label';
+      label.textContent = s.label;
+      const value = doc.createElement('div');
+      value.className = 'step-value';
+      value.textContent = s.value;
+      stepDiv.appendChild(label);
+      stepDiv.appendChild(value);
+      stepsBox.appendChild(stepDiv);
+    });
+    body.appendChild(stepsBox);
 
-    addLine(`משקל: ${weight} ק"ג`);
-    addLine(`מינון לנטילה: ${perDoseStr}`);
-    addLine(`נפח לנטילה: ${volStr} — ${freqStr}`, true);
-    if (durationStr) addLine(`משך טיפול: ${durationStr}`);
-    addLine(`ריכוז: ${concentration} מ"ג/מ"ל`);
-    if (catalogNotes) addLine(`הערה קלינית: ${catalogNotes}`);
-    if (doctorNotes) addLine(`הערה: ${doctorNotes}`);
+    const resultBox = doc.createElement('div');
+    resultBox.className = 'box';
+    const resultLine = doc.createElement('p');
+    resultLine.className = 'big';
+    resultLine.textContent = `תן ${volStr} — ${freqStr}`;
+    resultBox.appendChild(resultLine);
+    if (durationStr) {
+      const durLine = doc.createElement('p');
+      durLine.textContent = `למשך ${durationStr}`;
+      resultBox.appendChild(durLine);
+    }
+    body.appendChild(resultBox);
 
-    body.appendChild(box);
+    if (catalogNotes) {
+      const pClinical = doc.createElement('p');
+      pClinical.textContent = `הערה קלינית: ${catalogNotes}`;
+      body.appendChild(pClinical);
+    }
+    if (doctorNotes) {
+      const pNotes = doc.createElement('p');
+      pNotes.textContent = `הערה: ${doctorNotes}`;
+      body.appendChild(pNotes);
+    }
 
     const footer = doc.createElement('p');
     footer.style.fontSize = '12px';
     footer.style.color = '#999';
-    footer.textContent = '⚠️ לשימוש רפואי בלבד | TinyDose — tinydose.drdevir.com';
+    footer.textContent = 'TinyDose — tinydose.drdevir.com | לשימוש רפואי בלבד';
     body.appendChild(footer);
 
-    doc.close();
     printWin.print();
   });
 

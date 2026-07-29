@@ -191,6 +191,15 @@ input[type=number] { direction: ltr; text-align: right; }
   font-weight: 600;
 }
 
+.conc-row { display: flex; gap: 8px; }
+.conc-row .field { flex: 1; }
+.conc-computed {
+  font-size: 0.82rem;
+  color: var(--gray-500);
+  margin-top: 4px;
+  min-height: 1.1em;
+}
+
 /* ── Search ── */
 .search-wrap { position: relative; }
 .search-wrap input { padding-right: 40px; }
@@ -315,18 +324,23 @@ input[type=number] { direction: ltr; text-align: right; }
 .result-body { padding: 20px; }
 
 .calc-step {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 8px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--gray-100);
-  font-size: 0.9rem;
-  gap: 8px;
 }
 
 .calc-step:last-of-type { border-bottom: none; }
-.calc-step .label { color: var(--gray-500); flex: 0 0 auto; direction: ltr; }
-.calc-step .value { font-weight: 600; color: var(--gray-800); text-align: left; direction: ltr; }
+
+.step-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 3px;
+}
+
+.step-value {
+  font-size: 0.95rem;
+  color: var(--gray-700);
+}
 
 .result-summary {
   background: var(--success-light);
@@ -593,6 +607,7 @@ input[type=number] { direction: ltr; text-align: right; }
 @media (max-width: 480px) {
   .form-grid { grid-template-columns: 1fr; }
   .form-grid .full { grid-column: 1; }
+  .conc-row { flex-direction: column; }
 }
 
 /* toggle switch */
