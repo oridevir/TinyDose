@@ -655,3 +655,25 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff-card input.ff-text { max-width: 300px; text-align: center; }
 .ff-hint { font-size: 0.78rem; color: var(--gray-400); margin-top: 4px; }
 .ff-card .conc-computed { text-align: center; }
+.ff-section-title {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gray-400);
+  letter-spacing: .02em;
+  margin: 4px 0 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gray-100);
+}
+.ff-section-title span { font-weight: 500; }
+.ff-card .card-title + .ff-section-title { border-top: none; padding-top: 0; }
+.ff-weight-box {
+  background: var(--primary-light);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  margin: 6px 0 18px;
+}
+.ff-weight-box label { font-size: 1.05rem !important; color: var(--primary-dark) !important; }
+.ff-card .ff-weight-box input[type=number] { width: 120px; font-size: 1.5rem; font-weight: 700; padding: 8px; }
+.ff-weight-box .unit { font-size: 1.05rem !important; color: var(--primary-dark) !important; }

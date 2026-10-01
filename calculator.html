@@ -424,36 +424,53 @@ function renderFreeForm() {
     <div class="disclaimer">חישוב חופשי — יש להזין את כל פרטי המינון ידנית. בדוק את הנתונים מול מקור מהימן.</div>
     <div class="card ff-card">
       <div class="card-title">✏️ חישוב חופשי</div>
+
+      <div class="ff-section-title">פרטים להדפסה ושליחה <span>(לא חובה)</span></div>
       <div class="ff-grid">
         <div class="field">
-          <label for="ff-weight">משקל הילד *</label>
-          <div class="ff-inline">
-            <input type="number" id="ff-weight" placeholder="0" min="0.5" max="120" step="0.5" inputmode="decimal">
-            <span class="unit">ק"ג</span>
-          </div>
+          <label for="ff-patient">שם המטופל</label>
+          <input type="text" id="ff-patient" class="ff-text" autocomplete="off">
         </div>
         <div class="field">
-          <label for="ff-doses">מנות ביום *</label>
-          <div class="ff-inline">
-            <input type="number" id="ff-doses" min="1" max="6" step="1" inputmode="numeric">
-          </div>
+          <label for="ff-patient-id">מספר זהות</label>
+          <input type="text" id="ff-patient-id" class="ff-text" inputmode="numeric" maxlength="9" autocomplete="off" dir="ltr">
         </div>
+      </div>
+      <div class="field">
+        <label for="ff-diagnosis">אבחנה</label>
+        <input type="text" id="ff-diagnosis" class="ff-text" placeholder="לדוגמה: דלקת אוזניים" autocomplete="off">
       </div>
       <div class="field">
         <label for="ff-drug">שם התרופה</label>
-        <input type="text" id="ff-drug" class="ff-text" placeholder="לדוגמה: אמוקסיצילין">
+        <input type="text" id="ff-drug" class="ff-text" placeholder="לדוגמה: אמוקסיצילין" autocomplete="off">
       </div>
-      <div class="field">
-        <label for="ff-dose-min">מינון (מ"ג/ק"ג/יום) *</label>
+
+      <div class="ff-weight-box field">
+        <label for="ff-weight">משקל הילד *</label>
         <div class="ff-inline">
-          <input type="number" id="ff-dose-min" min="0" step="any" placeholder="מ-" inputmode="decimal">
+          <input type="number" id="ff-weight" placeholder="0" min="0.5" max="120" step="0.5" inputmode="decimal">
+          <span class="unit">ק"ג</span>
+        </div>
+      </div>
+
+      <div class="ff-section-title">מינון</div>
+      <div class="field">
+        <label for="ff-dose-min">מינון נדרש (מ"ג/ק"ג/יום) *</label>
+        <div class="ff-inline">
+          <input type="number" id="ff-dose-min" min="0" step="any" placeholder="מינימום" inputmode="decimal">
           <span class="unit">עד</span>
           <input type="number" id="ff-dose-max" min="0" step="any" placeholder="אופציונלי" inputmode="decimal">
         </div>
         <p class="ff-hint">מינון קבוע ולא טווח? השאר את השדה השני ריק</p>
       </div>
       <div class="field">
-        <label for="ff-conc-mg">ריכוז הסירופ *</label>
+        <label for="ff-doses">מספר מנות ביום *</label>
+        <div class="ff-inline">
+          <input type="number" id="ff-doses" min="1" max="6" step="1" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field">
+        <label for="ff-conc-mg">ריכוז התרופה בסירופ *</label>
         <div class="ff-inline">
           <input type="number" id="ff-conc-mg" min="0" step="any" inputmode="decimal">
           <span class="unit">מ"ג ב־</span>
@@ -474,8 +491,6 @@ function renderFreeForm() {
     <div id="result-area"></div>
   `;
 
-  document.getElementById('ff-weight').focus();
-
   const concMgInput = document.getElementById('ff-conc-mg');
   const concMlInput = document.getElementById('ff-conc-ml');
   const concResultEl = document.getElementById('ff-conc-result');
@@ -489,6 +504,9 @@ function renderFreeForm() {
 
   document.getElementById('ff-calc-btn').addEventListener('click', () => {
     const drugName = document.getElementById('ff-drug').value.trim();
+    const patientName = document.getElementById('ff-patient').value.trim();
+    const patientId = document.getElementById('ff-patient-id').value.trim();
+    const diagnosis = document.getElementById('ff-diagnosis').value.trim();
     const doseMin = parseFloat(document.getElementById('ff-dose-min').value);
     const doseMaxRaw = document.getElementById('ff-dose-max').value;
     const doseMax = doseMaxRaw ? parseFloat(doseMaxRaw) : null;
@@ -507,11 +525,11 @@ function renderFreeForm() {
     if (doseMax != null && doseMax < doseMin) { showToast('מינון מקסימום קטן ממינימום'); return; }
 
     const conc = round2(concMg / concMl);
-    renderFreeResult({ drugName, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight });
+    renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight });
   });
 }
 
-function renderFreeResult({ drugName, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight }) {
+function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight }) {
   const calc = calculateDose({
     weight, doseMin, doseMax, concentration: conc, dosesPerDay, maxDailyDoseMg,
   });
@@ -528,7 +546,8 @@ function renderFreeResult({ drugName, doseMin, doseMax, conc, dosesPerDay, maxDa
 
   renderResultArea({
     drugName: displayName,
-    indicationHe: 'חישוב חופשי',
+    indicationHe: diagnosis || null,
+    patientName, patientId,
     indicationEn: null,
     weight,
     steps: [
@@ -551,9 +570,12 @@ function renderFreeResult({ drugName, doseMin, doseMax, conc, dosesPerDay, maxDa
 function renderResultArea({
   drugName, indicationHe, indicationEn, weight, steps,
   calc, dosesPerDay, durationDays, freqStr, concentration, maxDailyDoseMg,
-  adultDoseNote, catalogNotes, freeMode
+  adultDoseNote, catalogNotes, freeMode, patientName, patientId
 }) {
   const resultArea = document.getElementById('result-area');
+  const patientStr = [patientName, patientId ? `ת.ז. ${patientId}` : ''].filter(Boolean).join(' · ');
+  const indicationDisplay = indicationHe || (freeMode ? 'חישוב חופשי' : '');
+  const patientHeaderHtml = patientStr ? `<div class="result-indication">👤 ${esc(patientStr)}</div>` : '';
   const durationStr = durationDays ? `${durationDays} ימים` : null;
 
   const stepHtml = s => `
@@ -614,7 +636,8 @@ function renderResultArea({
       <div class="result-card">
         <div class="result-header" style="background:var(--warning);">
           <div class="result-drug">${esc(drugName)}</div>
-          <div class="result-indication">${esc(indicationHe)}${indicationEn ? ' · ' + esc(indicationEn) : ''}</div>
+          <div class="result-indication">${esc(indicationDisplay)}${indicationEn ? ' · ' + esc(indicationEn) : ''}</div>
+          ${patientHeaderHtml}
         </div>
         <div class="result-body">
           ${steps.map(stepHtml).join('')}
@@ -655,7 +678,8 @@ function renderResultArea({
     <div class="result-card">
       <div class="result-header">
         <div class="result-drug">${esc(drugName)}</div>
-        <div class="result-indication">${esc(indicationHe)}${indicationEn ? ' · ' + esc(indicationEn) : ''}</div>
+        <div class="result-indication">${esc(indicationDisplay)}${indicationEn ? ' · ' + esc(indicationEn) : ''}</div>
+        ${patientHeaderHtml}
       </div>
       <div class="result-body">
         ${allSteps.map(stepHtml).join('')}
@@ -687,8 +711,9 @@ function renderResultArea({
   document.getElementById('share-btn').addEventListener('click', () => {
     const doctorNotes = document.getElementById('doctor-notes').value.trim();
     const shareText =
+      (patientStr ? `👤 ${patientStr}\n` : '') +
       `💊 ${drugName}\n` +
-      (indicationHe && !freeMode ? `${indicationHe}\n` : '') +
+      (indicationHe ? `${indicationHe}\n` : '') +
       `────────────\n` +
       `מינון: ${perDoseStr} למנה\n` +
       `נפח: ${volStr} למנה\n` +
@@ -732,13 +757,20 @@ function renderResultArea({
 
     const body = doc.body;
 
+    if (patientStr) {
+      const pPatient = doc.createElement('p');
+      pPatient.style.fontWeight = 'bold';
+      pPatient.textContent = `מטופל: ${patientStr}`;
+      body.appendChild(pPatient);
+    }
+
     const h2 = doc.createElement('h2');
     h2.textContent = '💊 ' + drugName;
     body.appendChild(h2);
 
     if (indicationHe) {
       const pIndication = doc.createElement('p');
-      pIndication.textContent = indicationHe;
+      pIndication.textContent = freeMode ? `אבחנה: ${indicationHe}` : indicationHe;
       body.appendChild(pIndication);
     }
 
