@@ -633,3 +633,6 @@ input[type=number] { direction: ltr; text-align: right; }
 }
 .toggle input:checked + .toggle-slider { background: var(--primary); }
 .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+/* Free-calc-only mode (see config.js): hide catalog-only UI */
+.free-calc-only .catalog-only { display: none !important; }
