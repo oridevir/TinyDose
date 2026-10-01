@@ -636,3 +636,22 @@ input[type=number] { direction: ltr; text-align: right; }
 
 /* Free-calc-only mode (see config.js): hide catalog-only UI */
 .free-calc-only .catalog-only { display: none !important; }
+
+/* ── Free-calc form: compact, centered layout ── */
+.ff-card .card-title { text-align: center; font-size: 1.1rem; margin-bottom: 16px; }
+.ff-card .field { text-align: center; }
+.ff-card .field label { text-align: center; }
+.ff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ff-inline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+.ff-card input[type=number] { width: 88px; flex: none; text-align: center; -moz-appearance: textfield; }
+.ff-card input[type=number]::-webkit-inner-spin-button,
+.ff-card input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.ff-inline .unit { font-size: 0.85rem; color: var(--gray-500); font-weight: 600; white-space: nowrap; }
+.ff-card input.ff-text { max-width: 300px; text-align: center; }
+.ff-hint { font-size: 0.78rem; color: var(--gray-400); margin-top: 4px; }
+.ff-card .conc-computed { text-align: center; }

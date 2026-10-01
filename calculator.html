@@ -422,48 +422,52 @@ function renderResult(med, weight) {
 function renderFreeForm() {
   main.innerHTML = `
     <div class="disclaimer">חישוב חופשי — יש להזין את כל פרטי המינון ידנית. בדוק את הנתונים מול מקור מהימן.</div>
-    <div class="card">
-      <div class="card-title">חישוב חופשי</div>
-      <div class="field">
-        <label>משקל הילד (ק"ג) *</label>
-        <div class="input-row">
-          <input type="number" id="ff-weight" placeholder="0" min="0.5" max="120" step="0.5" inputmode="decimal">
-          <span class="unit">ק"ג</span>
+    <div class="card ff-card">
+      <div class="card-title">✏️ חישוב חופשי</div>
+      <div class="ff-grid">
+        <div class="field">
+          <label for="ff-weight">משקל הילד *</label>
+          <div class="ff-inline">
+            <input type="number" id="ff-weight" placeholder="0" min="0.5" max="120" step="0.5" inputmode="decimal">
+            <span class="unit">ק"ג</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="ff-doses">מנות ביום *</label>
+          <div class="ff-inline">
+            <input type="number" id="ff-doses" min="1" max="6" step="1" inputmode="numeric">
+          </div>
         </div>
       </div>
       <div class="field">
-        <label>שם התרופה</label>
-        <input type="text" id="ff-drug" placeholder="לדוגמה: אמוקסיצילין">
+        <label for="ff-drug">שם התרופה</label>
+        <input type="text" id="ff-drug" class="ff-text" placeholder="לדוגמה: אמוקסיצילין">
       </div>
       <div class="field">
-        <label>מינון מומלץ (מ"ג/ק"ג/יום) *</label>
-        <div style="display:flex;gap:8px;">
-          <input type="number" id="ff-dose-min" min="0" step="any" placeholder="מינימום" dir="ltr" style="flex:1;">
-          <input type="number" id="ff-dose-max" min="0" step="any" placeholder="מקסימום (אופציונלי)" dir="ltr" style="flex:1;">
+        <label for="ff-dose-min">מינון (מ"ג/ק"ג/יום) *</label>
+        <div class="ff-inline">
+          <input type="number" id="ff-dose-min" min="0" step="any" placeholder="מ-" inputmode="decimal">
+          <span class="unit">עד</span>
+          <input type="number" id="ff-dose-max" min="0" step="any" placeholder="אופציונלי" inputmode="decimal">
         </div>
-        <p style="font-size:.78rem;color:var(--gray-400);margin-top:4px;">השאר ריק אם המינון קבוע ולא טווח</p>
+        <p class="ff-hint">מינון קבוע ולא טווח? השאר את השדה השני ריק</p>
       </div>
       <div class="field">
-        <label>ריכוז התרופה בסירופ *</label>
-        <div class="conc-row">
-          <div class="field" style="margin-bottom:0;">
-            <label for="ff-conc-mg">מ"ג</label>
-            <input type="number" id="ff-conc-mg" min="0" step="any" dir="ltr">
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label for="ff-conc-ml">מ"ל</label>
-            <input type="number" id="ff-conc-ml" min="0" step="any" dir="ltr">
-          </div>
+        <label for="ff-conc-mg">ריכוז הסירופ *</label>
+        <div class="ff-inline">
+          <input type="number" id="ff-conc-mg" min="0" step="any" inputmode="decimal">
+          <span class="unit">מ"ג ב־</span>
+          <input type="number" id="ff-conc-ml" min="0" step="any" inputmode="decimal">
+          <span class="unit">מ"ל</span>
         </div>
         <p id="ff-conc-result" class="conc-computed"></p>
       </div>
       <div class="field">
-        <label>מספר מנות ביום *</label>
-        <input type="number" id="ff-doses" min="1" max="6" step="1" dir="ltr">
-      </div>
-      <div class="field">
-        <label>מינון מקסימלי יומי מוחלט (מ"ג) — מומלץ מאוד</label>
-        <input type="number" id="ff-maxdaily" min="0" step="any" dir="ltr" placeholder="השאר ריק אם לא ידוע">
+        <label for="ff-maxdaily">מינון יומי מקסימלי מוחלט — מומלץ מאוד</label>
+        <div class="ff-inline">
+          <input type="number" id="ff-maxdaily" min="0" step="any" placeholder="לא ידוע" inputmode="decimal">
+          <span class="unit">מ"ג</span>
+        </div>
       </div>
       <button class="btn btn-primary btn-full btn-lg" id="ff-calc-btn">חשב מינון</button>
     </div>
