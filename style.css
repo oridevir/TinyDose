@@ -655,9 +655,11 @@ input[type=number] { direction: ltr; text-align: right; }
   background-repeat: no-repeat;
   color: var(--navy);
 }
-.ff-page .app-header { background: var(--sky); border-bottom: none; }
-.ff-page .logo-text { font-family: 'Fredoka', 'Varela Round', sans-serif; color: var(--pink); font-size: 1.4rem; }
-.ff-page .logo-icon { background: var(--pink); }
+.ff-page .app-header { background: var(--sky); border-bottom: none; justify-content: center; padding: 16px; }
+.ff-page .logo { gap: 12px; }
+.ff-page .logo-icon { background: var(--pink); width: 54px; height: 54px; border-radius: 16px; font-size: 28px; }
+.ff-page .logo-text { font-family: 'Fredoka', 'Varela Round', sans-serif; color: var(--pink); font-size: 2.1rem; line-height: 1; }
+.ff-page .logo-sub { font-family: 'Varela Round', sans-serif; font-size: 0.95rem; color: var(--navy); margin-top: 2px; }
 .ff-page footer { background: transparent; border-top: none; }
 .ff-page .disclaimer { border-radius: 18px; }
 
@@ -668,9 +670,9 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
 .ff-cloud { background: #fff; border-radius: 28px; padding: 14px 16px; box-shadow: 0 6px 0 #c3dcf5; }
-.ff-cloud-title { font-size: 0.85rem; color: #6b7bb3; margin-bottom: 8px; }
+.ff-cloud-title { font-size: 0.85rem; color: #6b7bb3; margin-bottom: 8px; text-align: center; }
 .ff-who { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.ff-who input { border: 2px solid #e2ecfb; border-radius: 16px; padding: 9px 12px; background: #f6faff; font-size: 0.95rem; min-width: 0; }
+.ff-who input { border: 2px solid #e2ecfb; border-radius: 16px; padding: 9px 12px; background: #f6faff; font-size: 0.95rem; min-width: 0; text-align: center; }
 .ff-who input:focus { border-color: var(--bubble); }
 
 .ff-balloon-wrap { display: flex; flex-direction: column; align-items: center; margin-top: 6px; }
@@ -696,18 +698,22 @@ input[type=number] { direction: ltr; text-align: right; }
 
 .ff-slider { padding: 0 6px; }
 .ff-slider input[type=range] { width: 100%; accent-color: var(--pink); height: 30px; }
-.ff-ticks { display: flex; justify-content: space-between; font-size: 0.72rem; color: #6b7bb3; direction: ltr; padding: 0 4px; }
+/* Range inputs run right-to-left on this RTL page (1 kg on the right), so the
+   scale is laid out the same way. Each number sits at its true position,
+   inset by the thumb radius so it lines up with the thumb's center. */
+.ff-ticks { position: relative; height: 1.2em; margin: 0 10px; font-size: 0.75rem; color: #6b7bb3; }
+.ff-ticks span { position: absolute; top: 0; transform: translateX(50%); }
 
-.ff-pill { border-radius: 26px; padding: 12px 18px 14px; display: flex; flex-direction: column; gap: 8px; }
+.ff-pill { border-radius: 26px; padding: 12px 18px 14px; display: flex; flex-direction: column; gap: 8px; text-align: center; }
 .ff-pill > label { font-size: 0.9rem; color: #4a5680; }
 .ff-peach { background: #ffe6dc; }
 .ff-yellow { background: #fff1c2; }
 .ff-green { background: #dcf5e4; }
 .ff-lilac { background: #ece1ff; }
-.ff-pair { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 1.05rem; }
+.ff-pair { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 1.05rem; }
 .ff-pair input { width: 92px; border: 2px solid transparent; border-radius: 999px; background: #fff; padding: 9px 6px; font-size: 1.15rem; }
 .ff-pair input:focus { border-color: var(--bubble); outline: none; }
-.ff-hint { font-size: 0.78rem; color: #6b7bb3; margin: -2px 0 0; min-height: 0; }
+.ff-hint { font-size: 0.78rem; color: #6b7bb3; margin: -2px 0 0; min-height: 0; text-align: center; }
 .ff-hint:empty { display: none; }
 
 .ff-bubble {
@@ -717,6 +723,7 @@ input[type=number] { direction: ltr; text-align: right; }
   display: grid; grid-template-columns: 1fr 104px; gap: 10px; align-items: center;
   margin-top: 4px;
 }
+.ff-bubble-text { text-align: center; }
 .ff-bubble small { font-size: 0.9rem; opacity: .95; display: block; }
 .ff-big { font-family: 'Secular One', 'Fredoka', sans-serif; font-size: 2.8rem; line-height: 1.1; }
 .ff-cup { width: 104px; height: 128px; overflow: visible; direction: ltr; }
@@ -728,18 +735,22 @@ input[type=number] { direction: ltr; text-align: right; }
   .ff-wave { animation: none; }
 }
 
-.ff-warn { background: #ffe3ec; color: #b0124d; border-radius: 16px; padding: 10px 14px; font-size: 0.88rem; line-height: 1.5; }
-.ff-go {
-  border: none; cursor: pointer;
-  background: #fff; color: var(--navy);
-  border-radius: 999px; padding: 14px;
-  font-family: 'Varela Round', sans-serif; font-size: 1rem;
-  box-shadow: 0 5px 0 #c3dcf5;
-}
-.ff-go:active { transform: translateY(3px); box-shadow: 0 2px 0 #c3dcf5; }
-.ff-go:focus-visible { outline: 3px solid var(--bubble); outline-offset: 2px; }
+.ff-placeholder { background: rgba(255,255,255,.7); border: 2px dashed #b9d7f3; border-radius: 22px; padding: 18px; text-align: center; color: #6b7bb3; font-family: 'Varela Round', sans-serif; font-size: 0.92rem; }
 
 .ff-page #result-area { margin-top: 16px; }
 .ff-page .result-card { border-radius: 26px; }
 .ff-page .result-header { background: var(--pink); }
 .ff-page .step-label { color: var(--bubble); }
+.ff-page .result-body { text-align: center; }
+.ff-page .result-header { text-align: center; }
+.ff-page .result-actions { background: #f6faff; }
+.ff-page .result-card .btn { border-radius: 999px; font-family: 'Varela Round', sans-serif; }
+
+/* Result action buttons (both flows) */
+.result-actions .btn { flex: 1; justify-content: center; font-weight: 700; padding: 11px 8px; font-size: 0.95rem; }
+.act-share { background: #25d366; color: #fff; }
+.act-share:hover { background: #1fb457; }
+.act-print { background: var(--primary); color: #fff; }
+.act-print:hover { background: var(--primary-dark); }
+.act-reset { background: #fff; color: var(--gray-700); border: 1.5px solid var(--gray-300); }
+.act-reset:hover { background: var(--gray-100); }

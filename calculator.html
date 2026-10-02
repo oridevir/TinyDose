@@ -425,7 +425,6 @@ function renderResult(med, weight) {
 function renderFreeForm() {
   document.body.classList.add('ff-page');
   main.innerHTML = `
-    <div class="disclaimer">חישוב חופשי — יש להזין את כל פרטי המינון ידנית. בדוק את הנתונים מול מקור מהימן.</div>
     <div class="ff">
       <div class="ff-cloud">
         <div class="ff-cloud-title">פרטים להדפסה ושליחה · לא חובה</div>
@@ -447,7 +446,8 @@ function renderFreeForm() {
       </div>
       <div class="ff-slider">
         <input type="range" id="ff-weight-slider" min="1" max="50" step="0.5" value="10" aria-label="משקל הילד בסרגל">
-        <div class="ff-ticks" aria-hidden="true"><span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span></div>
+        <div class="ff-ticks" aria-hidden="true">${[1, 10, 20, 30, 40, 50].map(v =>
+          `<span style="right:${((v - 1) / 49) * 100}%">${v}</span>`).join('')}</div>
       </div>
 
       <div class="ff-pill ff-peach">
@@ -497,9 +497,6 @@ function renderFreeForm() {
           <text id="ff-cup-size" x="50" y="123" text-anchor="middle" fill="#dff0ff" font-size="9" font-family="Varela Round, Arial, sans-serif"></text>
         </svg>
       </div>
-      <div class="ff-warn" id="ff-live-warn" hidden></div>
-
-      <button class="ff-go" id="ff-calc-btn">📋 פירוט החישוב, הדפסה ושליחה</button>
     </div>
     <div id="result-area"></div>
   `;
@@ -566,8 +563,7 @@ function renderFreeForm() {
   // result, so the exceeded-max safety behavior is identical.
   function updateLive() {
     const f = readForm();
-    const volEl = $('ff-live-vol'), subEl = $('ff-live-sub'), warnEl = $('ff-live-warn');
-    warnEl.hidden = true;
+    const volEl = $('ff-live-vol'), subEl = $('ff-live-sub');
     concResult();
 
     const ready = f.weight > 0 && f.doseMin > 0 && f.dosesPerDay > 0 && f.concMg > 0 && f.concMl > 0;
@@ -575,12 +571,14 @@ function renderFreeForm() {
       volEl.textContent = '—';
       subEl.textContent = 'מלא את השדות המסומנים ב-*';
       drawCup(null);
+      showResultPlaceholder('פירוט החישוב יופיע כאן אחרי שימולאו כל השדות המסומנים ב-*');
       return;
     }
     if (f.doseMax != null && f.doseMax < f.doseMin) {
       volEl.textContent = '—';
       subEl.textContent = 'מינון ה"עד" קטן מה"מ-"';
       drawCup(null);
+      showResultPlaceholder('מינון ה"עד" קטן ממינון ה"מ-". יש לתקן את טווח המינון.');
       return;
     }
     const calc = calculateDose({
@@ -593,15 +591,29 @@ function renderFreeForm() {
     if (calc.exceeded) {
       volEl.textContent = '—';
       subEl.textContent = 'חריגה מהמקסימום היומי';
-      warnEl.textContent = `⛔ המינון שחושב (${calc.dailyMax} מ"ג ליום) חורג מהמקסימום שהזנת (${f.maxDailyDoseMg} מ"ג). יש לקבוע מינון על דעת הרופא.`;
-      warnEl.hidden = false;
       drawCup(null);
+      renderDetails(f);
       return;
     }
     const range = (a, b) => (calc.hasRange && a !== b) ? `${a}–${b}` : `${a}`;
     volEl.textContent = `${range(calc.volMin, calc.volMax)} מ"ל`;
     subEl.textContent = `${freqStr} · ${range(calc.perDoseMin, calc.perDoseMax)} מ"ג למנה`;
     drawCup(calc.volMax);
+    renderDetails(f);
+  }
+
+  // The detailed steps + share/print/reset always sit under the bubble and
+  // follow every keystroke. Doctor notes typed there survive the re-render.
+  function renderDetails(f) {
+    const notesEl = document.getElementById('doctor-notes');
+    const notes = notesEl ? notesEl.value : '';
+    renderFreeResult({ ...f, conc: round2(f.concMg / f.concMl), scroll: false });
+    const newNotes = document.getElementById('doctor-notes');
+    if (newNotes) newNotes.value = notes;
+  }
+
+  function showResultPlaceholder(text) {
+    $('result-area').innerHTML = `<div class="ff-placeholder">${esc(text)}</div>`;
   }
 
   function concResult() {
@@ -618,29 +630,12 @@ function renderFreeForm() {
     if (w > 0) slider.value = Math.min(w, 50);
   });
 
-  document.querySelector('.ff').addEventListener('input', () => {
-    // Any change makes an open detailed result stale.
-    $('result-area').innerHTML = '';
-    updateLive();
-  });
-
-  $('ff-calc-btn').addEventListener('click', () => {
-    const f = readForm();
-    if (!f.weight || f.weight <= 0) { showToast('יש להזין משקל תקין'); return; }
-    if (!f.doseMin || f.doseMin <= 0) { showToast('יש להזין מינון תקין'); return; }
-    if (!f.dosesPerDay || f.dosesPerDay <= 0) { showToast('יש להזין מספר מנות ביום'); return; }
-    if (!f.concMg || f.concMg <= 0) { showToast('יש להזין מ"ג תקין'); return; }
-    if (!f.concMl || f.concMl <= 0) { showToast('יש להזין מ"ל תקין'); return; }
-    if (f.doseMax != null && f.doseMax < f.doseMin) { showToast('מינון מקסימום קטן ממינימום'); return; }
-
-    const conc = round2(f.concMg / f.concMl);
-    renderFreeResult({ ...f, conc });
-  });
+  document.querySelector('.ff').addEventListener('input', updateLive);
 
   updateLive();
 }
 
-function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight }) {
+function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight, scroll = true }) {
   const calc = calculateDose({
     weight, doseMin, doseMax, concentration: conc, dosesPerDay, maxDailyDoseMg,
   });
@@ -674,6 +669,7 @@ function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin
     adultDoseNote: null,
     catalogNotes: null,
     freeMode: true,
+    scroll,
   });
 }
 
@@ -681,7 +677,7 @@ function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin
 function renderResultArea({
   drugName, indicationHe, indicationEn, weight, steps,
   calc, dosesPerDay, durationDays, freqStr, concentration, maxDailyDoseMg,
-  adultDoseNote, catalogNotes, freeMode, patientName, patientId
+  adultDoseNote, catalogNotes, freeMode, patientName, patientId, scroll = true
 }) {
   const resultArea = document.getElementById('result-area');
   const patientStr = [patientName, patientId ? `ת.ז. ${patientId}` : ''].filter(Boolean).join(' · ');
@@ -756,7 +752,7 @@ function renderResultArea({
         </div>
       </div>
     `;
-    document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
+    if (scroll) document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
     return;
   }
 
@@ -812,9 +808,9 @@ function renderResultArea({
         </div>
       </div>
       <div class="result-actions">
-        <button class="btn btn-ghost btn-sm" id="share-btn">📤 שתף/WhatsApp</button>
-        <button class="btn btn-secondary btn-sm" id="print-btn">🖨️ הדפס</button>
-        <button class="btn btn-secondary btn-sm" id="reset-btn">↺ איפוס</button>
+        <button class="btn btn-sm act-share" id="share-btn">📤 שליחה</button>
+        <button class="btn btn-sm act-print" id="print-btn">🖨️ הדפסה</button>
+        <button class="btn btn-sm act-reset" id="reset-btn">↺ איפוס</button>
       </div>
     </div>
   `;
@@ -940,12 +936,17 @@ function renderResultArea({
   });
 
   document.getElementById('reset-btn').addEventListener('click', () => {
+    if (freeMode) {
+      renderFreeForm();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     document.getElementById('result-area').innerHTML = '';
     const wInput = document.getElementById('weight-input') || document.getElementById('ff-weight');
     if (wInput) { wInput.value = ''; wInput.focus(); }
   });
 
-  document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
+  if (scroll) document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
 }
 
 function showToast(msg) {
