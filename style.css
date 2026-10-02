@@ -660,6 +660,7 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff-page .logo-icon { background: var(--pink); width: 54px; height: 54px; border-radius: 16px; font-size: 28px; }
 .ff-page .logo-text { font-family: 'Fredoka', 'Varela Round', sans-serif; color: var(--pink); font-size: 2.1rem; line-height: 1; }
 .ff-page .logo-sub { font-family: 'Varela Round', sans-serif; font-size: 0.95rem; color: var(--navy); margin-top: 2px; }
+.ff-page .logo-text, .ff-page .logo-sub { text-align: center; }
 .ff-page footer { background: transparent; border-top: none; }
 .ff-page .disclaimer { border-radius: 18px; }
 
@@ -669,10 +670,10 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff input[type=number]::-webkit-inner-spin-button,
 .ff input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
-.ff-cloud { background: #fff; border-radius: 28px; padding: 14px 16px; box-shadow: 0 6px 0 #c3dcf5; }
+.ff-cloud { background: #f1eaff; border-radius: 28px; padding: 14px 16px; box-shadow: 0 6px 0 #c3dcf5; }
 .ff-cloud-title { font-size: 0.85rem; color: #6b7bb3; margin-bottom: 8px; text-align: center; }
 .ff-who { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.ff-who input { border: 2px solid #e2ecfb; border-radius: 16px; padding: 9px 12px; background: #f6faff; font-size: 0.95rem; min-width: 0; text-align: center; }
+.ff-who input { border: 2px solid #e2d6fb; border-radius: 16px; padding: 9px 12px; background: #fff; font-size: 0.95rem; min-width: 0; text-align: center; }
 .ff-who input:focus { border-color: var(--bubble); }
 
 .ff-balloon-wrap { display: flex; flex-direction: column; align-items: center; margin-top: 6px; }
@@ -698,11 +699,12 @@ input[type=number] { direction: ltr; text-align: right; }
 
 .ff-slider { padding: 0 6px; }
 .ff-slider input[type=range] { width: 100%; accent-color: var(--pink); height: 30px; }
-/* Range inputs run right-to-left on this RTL page (1 kg on the right), so the
-   scale is laid out the same way. Each number sits at its true position,
-   inset by the thumb radius so it lines up with the thumb's center. */
-.ff-ticks { position: relative; height: 1.2em; margin: 0 10px; font-size: 0.75rem; color: #6b7bb3; }
-.ff-ticks span { position: absolute; top: 0; transform: translateX(50%); }
+/* The weight slider reads like a number line, left to right (1 kg on the
+   left), even on this RTL page. Each number sits at its true position, inset
+   by the thumb radius so it lines up with the thumb's center. */
+.ff-slider input[type=range] { direction: ltr; }
+.ff-ticks { position: relative; height: 1.2em; margin: 0 10px; font-size: 0.75rem; color: #6b7bb3; direction: ltr; }
+.ff-ticks span { position: absolute; top: 0; transform: translateX(-50%); }
 
 .ff-pill { border-radius: 26px; padding: 12px 18px 14px; display: flex; flex-direction: column; gap: 8px; text-align: center; }
 .ff-pill > label { font-size: 0.9rem; color: #4a5680; }

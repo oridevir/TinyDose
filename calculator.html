@@ -445,9 +445,9 @@ function renderFreeForm() {
         <svg class="ff-string" viewBox="0 0 40 30" aria-hidden="true"><path d="M20 0 C 8 9, 32 16, 18 30" fill="none" stroke="#e64a80" stroke-width="2"/></svg>
       </div>
       <div class="ff-slider">
-        <input type="range" id="ff-weight-slider" min="1" max="50" step="0.5" value="10" aria-label="משקל הילד בסרגל">
-        <div class="ff-ticks" aria-hidden="true">${[1, 10, 20, 30, 40, 50].map(v =>
-          `<span style="right:${((v - 1) / 49) * 100}%">${v}</span>`).join('')}</div>
+        <input type="range" id="ff-weight-slider" min="1" max="40" step="0.5" value="10" aria-label="משקל הילד בסרגל">
+        <div class="ff-ticks" aria-hidden="true">${[1, 10, 20, 30, 40].map(v =>
+          `<span style="left:${((v - 1) / 39) * 100}%">${v}</span>`).join('')}</div>
       </div>
 
       <div class="ff-pill ff-peach">
@@ -623,11 +623,11 @@ function renderFreeForm() {
   }
 
   // Weight: the number field and the slider stay in sync. The slider only
-  // covers 1–50 kg; heavier children are typed in.
+  // covers 1–40 kg; heavier children are typed in.
   slider.addEventListener('input', () => { weightInput.value = slider.value; });
   weightInput.addEventListener('input', () => {
     const w = parseFloat(weightInput.value);
-    if (w > 0) slider.value = Math.min(w, 50);
+    if (w > 0) slider.value = Math.min(w, 40);
   });
 
   document.querySelector('.ff').addEventListener('input', updateLive);
