@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TinyDose — מחשבון</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
   <link rel="stylesheet" href="style.css">
   <script src="config.js"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
@@ -420,113 +423,221 @@ function renderResult(med, weight) {
 
 // ── Free calculation flow ──
 function renderFreeForm() {
+  document.body.classList.add('ff-page');
   main.innerHTML = `
     <div class="disclaimer">חישוב חופשי — יש להזין את כל פרטי המינון ידנית. בדוק את הנתונים מול מקור מהימן.</div>
-    <div class="card ff-card">
-      <div class="card-title">✏️ חישוב חופשי</div>
-
-      <div class="ff-section-title">פרטים להדפסה ושליחה <span>(לא חובה)</span></div>
-      <div class="ff-grid">
-        <div class="field">
-          <label for="ff-patient">שם המטופל</label>
-          <input type="text" id="ff-patient" class="ff-text" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="ff-patient-id">מספר זהות</label>
-          <input type="text" id="ff-patient-id" class="ff-text" inputmode="numeric" maxlength="9" autocomplete="off" dir="ltr">
-        </div>
-      </div>
-      <div class="field">
-        <label for="ff-diagnosis">אבחנה</label>
-        <input type="text" id="ff-diagnosis" class="ff-text" placeholder="לדוגמה: דלקת אוזניים" autocomplete="off">
-      </div>
-      <div class="field">
-        <label for="ff-drug">שם התרופה</label>
-        <input type="text" id="ff-drug" class="ff-text" placeholder="לדוגמה: אמוקסיצילין" autocomplete="off">
-      </div>
-
-      <div class="ff-weight-box field">
-        <label for="ff-weight">משקל הילד *</label>
-        <div class="ff-inline">
-          <input type="number" id="ff-weight" placeholder="0" min="0.5" max="120" step="0.5" inputmode="decimal">
-          <span class="unit">ק"ג</span>
+    <div class="ff">
+      <div class="ff-cloud">
+        <div class="ff-cloud-title">פרטים להדפסה ושליחה · לא חובה</div>
+        <div class="ff-who">
+          <input type="text" id="ff-patient" placeholder="שם המטופל" aria-label="שם המטופל" autocomplete="off">
+          <input type="text" id="ff-patient-id" placeholder="מספר זהות" aria-label="מספר זהות" inputmode="numeric" maxlength="9" autocomplete="off">
+          <input type="text" id="ff-diagnosis" placeholder="אבחנה" aria-label="אבחנה" autocomplete="off">
+          <input type="text" id="ff-drug" placeholder="שם התרופה" aria-label="שם התרופה" autocomplete="off">
         </div>
       </div>
 
-      <div class="ff-section-title">מינון</div>
-      <div class="field">
-        <label for="ff-dose-min">מינון נדרש (מ"ג/ק"ג/יום) *</label>
-        <div class="ff-inline">
-          <input type="number" id="ff-dose-min" min="0" step="any" placeholder="מינימום" inputmode="decimal">
-          <span class="unit">עד</span>
-          <input type="number" id="ff-dose-max" min="0" step="any" placeholder="אופציונלי" inputmode="decimal">
+      <div class="ff-balloon-wrap">
+        <div class="ff-balloon">
+          <label for="ff-weight">משקל הילד *</label>
+          <input type="number" id="ff-weight" placeholder="?" min="0.5" max="120" step="0.5" inputmode="decimal">
+          <span>ק"ג</span>
+        </div>
+        <svg class="ff-string" viewBox="0 0 40 30" aria-hidden="true"><path d="M20 0 C 8 9, 32 16, 18 30" fill="none" stroke="#e64a80" stroke-width="2"/></svg>
+      </div>
+      <div class="ff-slider">
+        <input type="range" id="ff-weight-slider" min="1" max="50" step="0.5" value="10" aria-label="משקל הילד בסרגל">
+        <div class="ff-ticks" aria-hidden="true"><span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span></div>
+      </div>
+
+      <div class="ff-pill ff-peach">
+        <label for="ff-dose-min">מינון נדרש · מ"ג/ק"ג/יום *</label>
+        <div class="ff-pair">
+          <input type="number" id="ff-dose-min" min="0" step="any" inputmode="decimal">
+          <span>עד</span>
+          <input type="number" id="ff-dose-max" min="0" step="any" inputmode="decimal" placeholder="—" aria-label="מינון מקסימום (לא חובה)">
         </div>
         <p class="ff-hint">מינון קבוע ולא טווח? השאר את השדה השני ריק</p>
       </div>
-      <div class="field">
+      <div class="ff-pill ff-yellow">
         <label for="ff-doses">מספר מנות ביום *</label>
-        <div class="ff-inline">
-          <input type="number" id="ff-doses" min="1" max="6" step="1" inputmode="numeric">
-        </div>
+        <div class="ff-pair"><input type="number" id="ff-doses" min="1" max="6" step="1" inputmode="numeric"><span>מנות</span></div>
       </div>
-      <div class="field">
-        <label for="ff-conc-mg">ריכוז התרופה בסירופ *</label>
-        <div class="ff-inline">
-          <input type="number" id="ff-conc-mg" min="0" step="any" inputmode="decimal">
-          <span class="unit">מ"ג ב־</span>
-          <input type="number" id="ff-conc-ml" min="0" step="any" inputmode="decimal">
-          <span class="unit">מ"ל</span>
+      <div class="ff-pill ff-green">
+        <label for="ff-conc-mg">ריכוז הסירופ *</label>
+        <div class="ff-pair">
+          <input type="number" id="ff-conc-mg" min="0" step="any" inputmode="decimal" aria-label="מ&quot;ג">
+          <span>מ"ג ב־</span>
+          <input type="number" id="ff-conc-ml" min="0" step="any" inputmode="decimal" aria-label="מ&quot;ל">
+          <span>מ"ל</span>
         </div>
-        <p id="ff-conc-result" class="conc-computed"></p>
+        <p id="ff-conc-result" class="ff-hint"></p>
       </div>
-      <div class="field">
-        <label for="ff-maxdaily">מינון יומי מקסימלי מוחלט — מומלץ מאוד</label>
-        <div class="ff-inline">
-          <input type="number" id="ff-maxdaily" min="0" step="any" placeholder="לא ידוע" inputmode="decimal">
-          <span class="unit">מ"ג</span>
+      <div class="ff-pill ff-lilac">
+        <label for="ff-maxdaily">מקסימום יומי · מומלץ מאוד</label>
+        <div class="ff-pair"><input type="number" id="ff-maxdaily" min="0" step="any" inputmode="decimal"><span>מ"ג</span></div>
+      </div>
+
+      <div class="ff-bubble">
+        <div class="ff-bubble-text">
+          <small>לתת בכל פעם</small>
+          <div class="ff-big" id="ff-live-vol">—</div>
+          <small id="ff-live-sub">מלא את השדות המסומנים ב-*</small>
         </div>
+        <svg class="ff-cup" viewBox="0 0 100 124" role="img" aria-label="כוס מדידה">
+          <defs><clipPath id="ff-cup-clip"><path d="M14 12 L86 12 L76 112 L24 112 Z"/></clipPath></defs>
+          <path d="M14 12 L86 12 L76 112 L24 112 Z" fill="rgba(255,255,255,.18)"/>
+          <g clip-path="url(#ff-cup-clip)">
+            <g id="ff-liquid" class="ff-liquid" style="transform: translateY(118px)">
+              <path class="ff-wave" fill="#ff7eb3" d=""/>
+            </g>
+          </g>
+          <g id="ff-cup-ticks" fill="#fff" font-size="9" font-family="Varela Round, Arial, sans-serif"></g>
+          <path d="M14 12 L86 12 L76 112 L24 112 Z" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+          <text id="ff-cup-size" x="50" y="123" text-anchor="middle" fill="#dff0ff" font-size="9" font-family="Varela Round, Arial, sans-serif"></text>
+        </svg>
       </div>
-      <button class="btn btn-primary btn-full btn-lg" id="ff-calc-btn">חשב מינון</button>
+      <div class="ff-warn" id="ff-live-warn" hidden></div>
+
+      <button class="ff-go" id="ff-calc-btn">📋 פירוט החישוב, הדפסה ושליחה</button>
     </div>
     <div id="result-area"></div>
   `;
 
-  const concMgInput = document.getElementById('ff-conc-mg');
-  const concMlInput = document.getElementById('ff-conc-ml');
-  const concResultEl = document.getElementById('ff-conc-result');
-  const updateConcDisplay = () => {
+  const $ = id => document.getElementById(id);
+  const weightInput = $('ff-weight');
+  const slider = $('ff-weight-slider');
+  const concMgInput = $('ff-conc-mg');
+  const concMlInput = $('ff-conc-ml');
+
+  // Liquid surface: a sine wave wider than the cup so it can scroll sideways.
+  let d = 'M-40 0';
+  for (let x = -40; x < 140; x += 20) d += ` Q${x + 5} -4 ${x + 10} 0 T${x + 20} 0`;
+  document.querySelector('#ff-liquid .ff-wave').setAttribute('d', d + ' V140 H-40 Z');
+
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const CUP_TOP = 12, CUP_BOTTOM = 112;
+  let cupCapacity = null;
+  function drawCup(vol) {
+    const liquid = $('ff-liquid');
+    if (!(vol > 0)) { liquid.style.transform = 'translateY(118px)'; return; }
+    const cap = vol <= 10 ? 10 : vol <= 20 ? 20 : 30;
+    if (cap !== cupCapacity) {
+      cupCapacity = cap;
+      const ticks = $('ff-cup-ticks');
+      ticks.textContent = '';
+      const step = cap === 10 ? 2 : 5;
+      for (let v = step; v <= cap; v += step) {
+        const y = CUP_BOTTOM - (CUP_BOTTOM - CUP_TOP) * v / cap;
+        // Ticks hug the slanted left wall; numbers sit just outside it.
+        const edgeX = 14 + 10 * (y - CUP_TOP) / (CUP_BOTTOM - CUP_TOP);
+        const line = document.createElementNS(SVGNS, 'rect');
+        line.setAttribute('x', edgeX); line.setAttribute('y', y - 0.8); line.setAttribute('width', 9); line.setAttribute('height', 1.6);
+        const label = document.createElementNS(SVGNS, 'text');
+        label.setAttribute('x', edgeX - 4); label.setAttribute('y', y + 3); label.setAttribute('text-anchor', 'end'); label.textContent = v;
+        ticks.append(line, label);
+      }
+      $('ff-cup-size').textContent = `כוס ${cap} מ"ל`;
+    }
+    const f = Math.min(vol, cap) / cap;
+    liquid.style.transform = `translateY(${CUP_BOTTOM - (CUP_BOTTOM - CUP_TOP) * f}px)`;
+    if (vol > 30) $('ff-cup-size').textContent = 'יותר מכוס אחת';
+  }
+
+  function readForm() {
+    const doseMaxRaw = $('ff-dose-max').value;
+    const maxDailyRaw = $('ff-maxdaily').value;
+    return {
+      drugName: $('ff-drug').value.trim(),
+      patientName: $('ff-patient').value.trim(),
+      patientId: $('ff-patient-id').value.trim(),
+      diagnosis: $('ff-diagnosis').value.trim(),
+      weight: parseFloat(weightInput.value),
+      doseMin: parseFloat($('ff-dose-min').value),
+      doseMax: doseMaxRaw ? parseFloat(doseMaxRaw) : null,
+      dosesPerDay: parseInt($('ff-doses').value),
+      concMg: parseFloat(concMgInput.value),
+      concMl: parseFloat(concMlInput.value),
+      maxDailyDoseMg: maxDailyRaw ? parseFloat(maxDailyRaw) : null,
+    };
+  }
+
+  // Live preview in the bubble. Uses the same calculateDose() as the detailed
+  // result, so the exceeded-max safety behavior is identical.
+  function updateLive() {
+    const f = readForm();
+    const volEl = $('ff-live-vol'), subEl = $('ff-live-sub'), warnEl = $('ff-live-warn');
+    warnEl.hidden = true;
+    concResult();
+
+    const ready = f.weight > 0 && f.doseMin > 0 && f.dosesPerDay > 0 && f.concMg > 0 && f.concMl > 0;
+    if (!ready) {
+      volEl.textContent = '—';
+      subEl.textContent = 'מלא את השדות המסומנים ב-*';
+      drawCup(null);
+      return;
+    }
+    if (f.doseMax != null && f.doseMax < f.doseMin) {
+      volEl.textContent = '—';
+      subEl.textContent = 'מינון ה"עד" קטן מה"מ-"';
+      drawCup(null);
+      return;
+    }
+    const calc = calculateDose({
+      weight: f.weight, doseMin: f.doseMin, doseMax: f.doseMax,
+      concentration: round2(f.concMg / f.concMl), dosesPerDay: f.dosesPerDay,
+      maxDailyDoseMg: f.maxDailyDoseMg,
+    });
+    const freqMap = { 1: 'פעם ביום', 2: 'פעמיים ביום', 3: 'שלוש פעמים ביום', 4: 'ארבע פעמים ביום' };
+    const freqStr = freqMap[f.dosesPerDay] || `${f.dosesPerDay} פעמים ביום`;
+    if (calc.exceeded) {
+      volEl.textContent = '—';
+      subEl.textContent = 'חריגה מהמקסימום היומי';
+      warnEl.textContent = `⛔ המינון שחושב (${calc.dailyMax} מ"ג ליום) חורג מהמקסימום שהזנת (${f.maxDailyDoseMg} מ"ג). יש לקבוע מינון על דעת הרופא.`;
+      warnEl.hidden = false;
+      drawCup(null);
+      return;
+    }
+    const range = (a, b) => (calc.hasRange && a !== b) ? `${a}–${b}` : `${a}`;
+    volEl.textContent = `${range(calc.volMin, calc.volMax)} מ"ל`;
+    subEl.textContent = `${freqStr} · ${range(calc.perDoseMin, calc.perDoseMax)} מ"ג למנה`;
+    drawCup(calc.volMax);
+  }
+
+  function concResult() {
     const mg = parseFloat(concMgInput.value);
     const ml = parseFloat(concMlInput.value);
-    concResultEl.textContent = (mg > 0 && ml > 0) ? `= ${round2(mg / ml)} מ"ג למ"ל` : '';
-  };
-  concMgInput.addEventListener('input', updateConcDisplay);
-  concMlInput.addEventListener('input', updateConcDisplay);
+    $('ff-conc-result').textContent = (mg > 0 && ml > 0) ? `= ${round2(mg / ml)} מ"ג למ"ל` : '';
+  }
 
-  document.getElementById('ff-calc-btn').addEventListener('click', () => {
-    const drugName = document.getElementById('ff-drug').value.trim();
-    const patientName = document.getElementById('ff-patient').value.trim();
-    const patientId = document.getElementById('ff-patient-id').value.trim();
-    const diagnosis = document.getElementById('ff-diagnosis').value.trim();
-    const doseMin = parseFloat(document.getElementById('ff-dose-min').value);
-    const doseMaxRaw = document.getElementById('ff-dose-max').value;
-    const doseMax = doseMaxRaw ? parseFloat(doseMaxRaw) : null;
-    const concMg = parseFloat(concMgInput.value);
-    const concMl = parseFloat(concMlInput.value);
-    const dosesPerDay = parseInt(document.getElementById('ff-doses').value);
-    const maxDailyRaw = document.getElementById('ff-maxdaily').value;
-    const maxDailyDoseMg = maxDailyRaw ? parseFloat(maxDailyRaw) : null;
-    const weight = parseFloat(document.getElementById('ff-weight').value);
-
-    if (!weight || weight <= 0) { showToast('יש להזין משקל תקין'); return; }
-    if (!doseMin || doseMin <= 0) { showToast('יש להזין מינון תקין'); return; }
-    if (!concMg || concMg <= 0) { showToast('יש להזין מ"ג תקין'); return; }
-    if (!concMl || concMl <= 0) { showToast('יש להזין מ"ל תקין'); return; }
-    if (!dosesPerDay || dosesPerDay <= 0) { showToast('יש להזין מספר מנות ביום'); return; }
-    if (doseMax != null && doseMax < doseMin) { showToast('מינון מקסימום קטן ממינימום'); return; }
-
-    const conc = round2(concMg / concMl);
-    renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight });
+  // Weight: the number field and the slider stay in sync. The slider only
+  // covers 1–50 kg; heavier children are typed in.
+  slider.addEventListener('input', () => { weightInput.value = slider.value; });
+  weightInput.addEventListener('input', () => {
+    const w = parseFloat(weightInput.value);
+    if (w > 0) slider.value = Math.min(w, 50);
   });
+
+  document.querySelector('.ff').addEventListener('input', () => {
+    // Any change makes an open detailed result stale.
+    $('result-area').innerHTML = '';
+    updateLive();
+  });
+
+  $('ff-calc-btn').addEventListener('click', () => {
+    const f = readForm();
+    if (!f.weight || f.weight <= 0) { showToast('יש להזין משקל תקין'); return; }
+    if (!f.doseMin || f.doseMin <= 0) { showToast('יש להזין מינון תקין'); return; }
+    if (!f.dosesPerDay || f.dosesPerDay <= 0) { showToast('יש להזין מספר מנות ביום'); return; }
+    if (!f.concMg || f.concMg <= 0) { showToast('יש להזין מ"ג תקין'); return; }
+    if (!f.concMl || f.concMl <= 0) { showToast('יש להזין מ"ל תקין'); return; }
+    if (f.doseMax != null && f.doseMax < f.doseMin) { showToast('מינון מקסימום קטן ממינימום'); return; }
+
+    const conc = round2(f.concMg / f.concMl);
+    renderFreeResult({ ...f, conc });
+  });
+
+  updateLive();
 }
 
 function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight }) {
