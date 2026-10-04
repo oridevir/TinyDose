@@ -676,13 +676,10 @@ input[type=number] { direction: ltr; text-align: right; }
   --pink-dark: #e64a80;
   --bubble: #2b9df4;
   background-color: var(--sky);
-  background-image:
-    radial-gradient(circle at 8% 140px, #fff 0 40px, transparent 41px),
-    radial-gradient(circle at 17% 120px, #fff 0 30px, transparent 31px),
-    radial-gradient(circle at 92% 420px, #fff 0 34px, transparent 35px),
-    radial-gradient(circle at 84% 440px, #fff 0 24px, transparent 25px),
-    radial-gradient(circle at 6% 820px, #fff 0 30px, transparent 31px),
-    radial-gradient(circle at 13% 835px, #fff 0 22px, transparent 23px);
+  /* Each cloud is one fixed-shape image, so it stays a cloud at any screen width. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 64'%3E%3Cg fill='white'%3E%3Ccircle cx='32' cy='40' r='20'/%3E%3Ccircle cx='58' cy='28' r='26'/%3E%3Ccircle cx='86' cy='38' r='21'/%3E%3Crect x='12' y='38' width='96' height='24' rx='12'/%3E%3C/g%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 64'%3E%3Cg fill='white'%3E%3Ccircle cx='32' cy='40' r='20'/%3E%3Ccircle cx='58' cy='28' r='26'/%3E%3Ccircle cx='86' cy='38' r='21'/%3E%3Crect x='12' y='38' width='96' height='24' rx='12'/%3E%3C/g%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 64'%3E%3Cg fill='white'%3E%3Ccircle cx='32' cy='40' r='20'/%3E%3Ccircle cx='58' cy='28' r='26'/%3E%3Ccircle cx='86' cy='38' r='21'/%3E%3Crect x='12' y='38' width='96' height='24' rx='12'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 150px auto, 120px auto, 110px auto;
+  background-position: 3% 110px, 97% 430px, 5% 820px;
   background-repeat: no-repeat;
   color: var(--navy);
 }
