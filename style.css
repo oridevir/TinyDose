@@ -676,17 +676,33 @@ input[type=number] { direction: ltr; text-align: right; }
   --pink-dark: #e64a80;
   --bubble: #2b9df4;
   background-color: var(--sky);
-  /* Each cloud = the same two overlapping circles the phone showed originally,
-     drawn as one image so the pair keeps its shape at any screen width. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 115 110'%3E%3Cg fill='white'%3E%3Ccircle cx='45' cy='65' r='40'/%3E%3Ccircle cx='80' cy='45' r='30'/%3E%3C/g%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 112 90'%3E%3Cg fill='white'%3E%3Ccircle cx='75' cy='42' r='34'/%3E%3Ccircle cx='44' cy='62' r='24'/%3E%3C/g%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90'%3E%3Cg fill='white'%3E%3Ccircle cx='35' cy='45' r='30'/%3E%3Ccircle cx='62' cy='60' r='22'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 115px 110px, 112px 90px, 90px 90px;
-  background-position: left -14px top 75px, right -18px top 378px, left -12px top 775px;
-  background-repeat: no-repeat;
   color: var(--navy);
 }
+/* Sky: a fixed layer of drifting clouds behind the page content. */
+.sky { display: none; }
+.ff-page .sky { display: block; position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.ff-page > *:not(.sky) { position: relative; z-index: 1; }
+.cloud { position: absolute; height: auto; aspect-ratio: 210 / 110; }
+.c1 { width: 190px; top: 7%;  left: -46px; }
+.c2 { width: 230px; top: 20%; right: -60px; }
+.c3 { width: 110px; top: 4%;  right: 16%; opacity: .7; }
+.c4 { width: 130px; top: 44%; left: 3%;  opacity: .8; }
+.c5 { width: 160px; top: 60%; right: 2%; opacity: .9; }
+.c6 { width: 210px; top: 80%; left: -50px; }
+.c7 { width: 95px;  top: 90%; right: 22%; opacity: .65; }
+@media (prefers-reduced-motion: no-preference) {
+  .cloud { animation: cloud-drift 26s ease-in-out infinite alternate; }
+  .c2 { animation-duration: 34s; animation-delay: -8s; }
+  .c3 { animation-duration: 40s; animation-delay: -15s; }
+  .c4 { animation-duration: 30s; animation-delay: -4s; }
+  .c5 { animation-duration: 36s; animation-delay: -20s; }
+  .c6 { animation-duration: 28s; animation-delay: -11s; }
+  .c7 { animation-duration: 44s; animation-delay: -25s; }
+}
+@keyframes cloud-drift { from { transform: translateX(-18px); } to { transform: translateX(18px); } }
 .ff-page .credit { background: transparent; color: var(--navy); font-family: 'Varela Round', sans-serif; padding-top: 0; }
 .ff-page .credit a { color: var(--pink-dark); }
-.ff-page .app-header { background: var(--sky); border-bottom: none; justify-content: center; padding: 16px; position: static; }
+.ff-page .app-header { background: transparent; border-bottom: none; justify-content: center; padding: 16px; position: relative; }
 .ff-page .logo { gap: 12px; }
 .ff-page .logo-icon { background: var(--pink); width: 54px; height: 54px; border-radius: 16px; font-size: 28px; }
 .ff-page .logo-text { font-family: 'Fredoka', 'Varela Round', sans-serif; color: var(--pink); font-size: 2.1rem; line-height: 1; }
