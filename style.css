@@ -752,18 +752,28 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff-bubble {
   background: var(--bubble); color: #fff;
   border-radius: 28px 28px 28px 8px;
-  padding: 16px 18px;
+  padding: 18px 18px;
+  border: 4px solid #fff;
+  box-shadow: 0 7px 0 #1b7fd0, 0 14px 30px rgba(27, 127, 208, .35);
   display: grid; grid-template-columns: 1fr 104px; gap: 10px; align-items: center;
   margin-top: 4px;
 }
 .ff-bubble-text { text-align: center; }
-.ff-bubble small { font-size: 0.9rem; opacity: .95; display: block; }
-.ff-big { font-family: 'Secular One', 'Fredoka', sans-serif; font-size: 2.8rem; line-height: 1.1; }
+.ff-bubble small { font-size: 0.95rem; opacity: .95; display: block; }
+.ff-bubble-text > small:first-child {
+  display: inline-block; background: #fff; color: var(--bubble);
+  font-weight: 700; border-radius: 999px; padding: 3px 14px; margin-bottom: 6px; opacity: 1;
+}
+.ff-big { font-family: 'Secular One', 'Fredoka', sans-serif; font-size: 3.2rem; line-height: 1.1; text-shadow: 0 3px 0 rgba(0,0,0,.12); }
+.ff-big.is-range { font-size: 2.3rem; }
+.ff-big.pop { animation: ff-pop .35s ease-out; }
+@keyframes ff-pop { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }
 .ff-cup { width: 104px; height: 128px; overflow: visible; direction: ltr; }
 .ff-liquid { transition: transform .7s cubic-bezier(.3, 1.4, .5, 1); }
 .ff-wave { animation: ff-wave 2.2s linear infinite; }
 @keyframes ff-wave { from { transform: translateX(0); } to { transform: translateX(-20px); } }
 @media (prefers-reduced-motion: reduce) {
+  .ff-big.pop { animation: none; }
   .ff-liquid { transition: none; }
   .ff-wave { animation: none; }
 }
@@ -776,17 +786,6 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff-page .step-label { color: var(--bubble); }
 .ff-page .result-body { text-align: center; }
 .ff-page .warning-box { justify-content: center; }
-/* The dose to give: the one line that must not be missed. */
-.ff-page .result-summary {
-  background: #eafff0;
-  border: 3px solid #22c55e;
-  border-radius: 22px;
-  box-shadow: 0 5px 0 #9fe3b6;
-  padding: 18px 14px;
-  margin-top: 18px;
-}
-.ff-page .result-summary .summary-line { font-size: 1.35rem; line-height: 1.45; color: #14532d; text-wrap: balance; }
-.ff-page .result-summary .summary-line .highlight { font-family: 'Secular One', 'Fredoka', sans-serif; font-size: 2.2rem; color: #15803d; }
 .ff-page .result-header { text-align: center; }
 .ff-page .result-actions { background: #f6faff; }
 .ff-page .result-card .btn { border-radius: 999px; font-family: 'Varela Round', sans-serif; }

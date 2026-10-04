@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261004e">
-  <script src="config.js?v=20261004e"></script>
+  <link rel="stylesheet" href="style.css?v=20261004f">
+  <script src="config.js?v=20261004f"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 </head>
 <body>
@@ -46,6 +46,10 @@
 
 <script type="module">
 import { supabase, round2, esc, calculateDose } from './app.js';
+
+// Numeric ranges like "6.5–9.75" must read left to right even inside Hebrew
+// text; without an LTR isolate the RTL page shows them as "9.75–6.5".
+const rng = (a, b) => `\u2066${a}–${b}\u2069`;
 
 const params = new URLSearchParams(location.search);
 const medId = params.get('id');
@@ -389,10 +393,10 @@ function renderResult(med, weight) {
   });
 
   const doseStr = calc.hasRange
-    ? `${dose_min_mg_per_kg_day}–${dose_max_mg_per_kg_day}`
+    ? `${rng(dose_min_mg_per_kg_day, dose_max_mg_per_kg_day)}`
     : `${dose_min_mg_per_kg_day}`;
   const dailyStr = calc.hasRange && calc.dailyMin !== calc.dailyMax
-    ? `${calc.dailyMin}–${calc.dailyMax} מ"ג`
+    ? `${rng(calc.dailyMin, calc.dailyMax)} מ"ג`
     : `${calc.dailyMin} מ"ג`;
 
   const freqMap = { 1: 'פעם ביום', 2: 'פעמיים ביום', 3: 'שלוש פעמים ביום', 4: 'ארבע פעמים ביום' };
@@ -568,14 +572,14 @@ function renderFreeForm() {
 
     const ready = f.weight > 0 && f.doseMin > 0 && f.dosesPerDay > 0 && f.concMg > 0 && f.concMl > 0;
     if (!ready) {
-      volEl.textContent = '—';
+      volEl.textContent = '—'; volEl.classList.remove('is-range');
       subEl.textContent = 'מלא את השדות המסומנים ב-*';
       drawCup(null);
       showResultPlaceholder('פירוט החישוב יופיע כאן אחרי שימולאו כל השדות המסומנים ב-*');
       return;
     }
     if (f.doseMax != null && f.doseMax < f.doseMin) {
-      volEl.textContent = '—';
+      volEl.textContent = '—'; volEl.classList.remove('is-range');
       subEl.textContent = 'מינון ה"עד" קטן מה"מ-"';
       drawCup(null);
       showResultPlaceholder('מינון ה"עד" קטן ממינון ה"מ-". יש לתקן את טווח המינון.');
@@ -589,14 +593,19 @@ function renderFreeForm() {
     const freqMap = { 1: 'פעם ביום', 2: 'פעמיים ביום', 3: 'שלוש פעמים ביום', 4: 'ארבע פעמים ביום' };
     const freqStr = freqMap[f.dosesPerDay] || `${f.dosesPerDay} פעמים ביום`;
     if (calc.exceeded) {
-      volEl.textContent = '—';
+      volEl.textContent = '—'; volEl.classList.remove('is-range');
       subEl.textContent = 'חריגה מהמקסימום היומי';
       drawCup(null);
       renderDetails(f);
       return;
     }
-    const range = (a, b) => (calc.hasRange && a !== b) ? `${a}–${b}` : `${a}`;
+    const range = (a, b) => (calc.hasRange && a !== b) ? `${rng(a, b)}` : `${a}`;
     volEl.textContent = `${range(calc.volMin, calc.volMax)} מ"ל`;
+    volEl.classList.toggle('is-range', calc.hasRange && calc.volMin !== calc.volMax);
+    if (volEl.dataset.last !== volEl.textContent) {
+      volEl.dataset.last = volEl.textContent;
+      volEl.classList.remove('pop'); void volEl.offsetWidth; volEl.classList.add('pop');
+    }
     subEl.textContent = `${freqStr} · ${range(calc.perDoseMin, calc.perDoseMax)} מ"ג למנה`;
     drawCup(calc.volMax);
     renderDetails(f);
@@ -652,9 +661,9 @@ function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin
     weight, doseMin, doseMax, concentration: conc, dosesPerDay, maxDailyDoseMg,
   });
 
-  const doseStr = calc.hasRange ? `${doseMin}–${doseMax}` : `${doseMin}`;
+  const doseStr = calc.hasRange ? `${rng(doseMin, doseMax)}` : `${doseMin}`;
   const dailyStr = calc.hasRange && calc.dailyMin !== calc.dailyMax
-    ? `${calc.dailyMin}–${calc.dailyMax} מ"ג`
+    ? `${rng(calc.dailyMin, calc.dailyMax)} מ"ג`
     : `${calc.dailyMin} מ"ג`;
 
   const freqMap = { 1: 'פעם ביום', 2: 'פעמיים ביום', 3: 'שלוש פעמים ביום', 4: 'ארבע פעמים ביום' };
@@ -770,15 +779,15 @@ function renderResultArea({
 
   // ── NORMAL CASE ──
   const perDoseStr = calc.hasRange && calc.perDoseMin !== calc.perDoseMax
-    ? `${calc.perDoseMin}–${calc.perDoseMax} מ"ג`
+    ? `${rng(calc.perDoseMin, calc.perDoseMax)} מ"ג`
     : `${calc.perDoseMin} מ"ג`;
   const volStr = calc.hasRange && calc.volMin !== calc.volMax
-    ? `${calc.volMin}–${calc.volMax} מ"ל`
+    ? `${rng(calc.volMin, calc.volMax)} מ"ל`
     : `${calc.volMin} מ"ל`;
   const volDisplay = `<span class="highlight">${volStr}</span>`;
 
   const dailyNumStr = calc.hasRange && calc.dailyMin !== calc.dailyMax
-    ? `${calc.dailyMin}–${calc.dailyMax}`
+    ? `${rng(calc.dailyMin, calc.dailyMax)}`
     : `${calc.dailyMin}`;
 
   const allSteps = [
