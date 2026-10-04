@@ -71,10 +71,15 @@ body {
   background: #fff;
   border: 2px solid #ff5d93;
   border-radius: 18px;
-  padding: 7px 16px;
+  padding: 7px 14px;
   text-wrap: balance;
   line-height: 1.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
+.top-warning span[aria-hidden] { flex: none; }
 .app-header {
   background: #fff;
   border-bottom: 1px solid var(--gray-200);

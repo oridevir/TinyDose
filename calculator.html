@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261004c">
-  <script src="config.js?v=20261004c"></script>
+  <link rel="stylesheet" href="style.css?v=20261004d">
+  <script src="config.js?v=20261004d"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 </head>
 <body>
@@ -32,7 +32,7 @@
 <div class="credit">
   פותח ע"י <strong>ד"ר אורי דביר</strong> · <a href="mailto:TinyDose@DrDevir.com" dir="ltr">TinyDose@DrDevir.com</a>
 </div>
-<div class="top-warning">⚠️ כלי עזר לרופאים בלבד — אינו מחליף שיקול דעת קליני</div>
+<div class="top-warning"><span aria-hidden="true">⚠️</span><span>כלי עזר לרופאים בלבד — אינו מחליף שיקול דעת קליני</span><span aria-hidden="true">⚠️</span></div>
 
 <main id="main-content">
   <div class="loading-wrap"><div class="spinner"></div><p style="margin-top:12px;">טוען...</p></div>
@@ -455,7 +455,7 @@ function renderFreeForm() {
         <div class="ff-pair">
           <input type="number" id="ff-dose-min" min="0" step="any" inputmode="decimal">
           <span>עד</span>
-          <input type="number" id="ff-dose-max" min="0" step="any" inputmode="decimal" placeholder="—" aria-label="מינון מקסימום (לא חובה)">
+          <input type="number" id="ff-dose-max" min="0" step="any" inputmode="decimal" aria-label="מינון מקסימום (לא חובה)">
         </div>
         <p class="ff-hint">מינון קבוע ולא טווח? השאר את השדה השני ריק</p>
       </div>
