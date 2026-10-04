@@ -11,3 +11,11 @@ window.FREE_CALC_ONLY = true;
 if (window.FREE_CALC_ONLY) {
   document.documentElement.classList.add('free-calc-only');
 }
+
+// SHOW_DEV_BANNER — the "site under development" strip at the top of every page.
+// true: shown.  false: hidden (the banner stays in the pages, ready to return).
+window.SHOW_DEV_BANNER = false;
+
+if (!window.SHOW_DEV_BANNER) {
+  document.documentElement.classList.add('hide-dev-banner');
+}

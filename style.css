@@ -51,6 +51,8 @@ body {
   padding: 10px 16px;
 }
 
+.hide-dev-banner .dev-banner { display: none; }
+
 /* ── Layout ── */
 .credit {
   text-align: center;
