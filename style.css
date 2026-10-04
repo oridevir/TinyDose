@@ -754,7 +754,7 @@ input[type=number] { direction: ltr; text-align: right; }
 
 .ff-bubble {
   background: var(--bubble); color: #fff;
-  border-radius: 28px 28px 28px 8px;
+  border-radius: 28px;
   padding: 18px 18px;
   border: 4px solid #fff;
   box-shadow: 0 10px 26px rgba(27, 127, 208, .28);
