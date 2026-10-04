@@ -775,6 +775,18 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff-page .result-header { background: var(--pink); }
 .ff-page .step-label { color: var(--bubble); }
 .ff-page .result-body { text-align: center; }
+.ff-page .warning-box { justify-content: center; }
+/* The dose to give: the one line that must not be missed. */
+.ff-page .result-summary {
+  background: #eafff0;
+  border: 3px solid #22c55e;
+  border-radius: 22px;
+  box-shadow: 0 5px 0 #9fe3b6;
+  padding: 18px 14px;
+  margin-top: 18px;
+}
+.ff-page .result-summary .summary-line { font-size: 1.35rem; line-height: 1.45; color: #14532d; text-wrap: balance; }
+.ff-page .result-summary .summary-line .highlight { font-family: 'Secular One', 'Fredoka', sans-serif; font-size: 2.2rem; color: #15803d; }
 .ff-page .result-header { text-align: center; }
 .ff-page .result-actions { background: #f6faff; }
 .ff-page .result-card .btn { border-radius: 999px; font-family: 'Varela Round', sans-serif; }
