@@ -7,44 +7,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261004p">
-  <script src="config.js?v=20261004p"></script>
+  <link rel="stylesheet" href="style.css?v=20261004q">
+  <script src="config.js?v=20261004q"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 </head>
 <body>
 
-<!-- Decorative sky for the free-calc page (shown only with .ff-page). One cloud
-     shape is defined once and reused at different sizes, depths and drift speeds.
-     The layer spans the whole page, so the clouds scroll with the content. -->
+<!-- Decorative sky for the free-calc page (shown only with .ff-page):
+     three cloud layers at different depths. -->
 <div class="sky" aria-hidden="true">
-  <svg width="0" height="0" style="position:absolute">
-    <defs>
-      <g id="cloud-shape">
-        <circle cx="34" cy="76" r="17"/>
-        <circle cx="62" cy="62" r="27"/>
-        <circle cx="98" cy="46" r="34"/>
-        <circle cx="138" cy="52" r="29"/>
-        <circle cx="172" cy="70" r="20"/>
-        <circle cx="70" cy="80" r="24"/>
-        <circle cx="112" cy="78" r="28"/>
-        <circle cx="152" cy="80" r="22"/>
-      </g>
-      <g id="cloud">
-        <use href="#cloud-shape" fill="#c9e2f8" transform="translate(0 4)"/>
-        <use href="#cloud-shape" fill="#ffffff"/>
-      </g>
-    </defs>
-  </svg>
-  <svg viewBox="0 0 210 112" class="cloud c1" data-depth="0.3"><use href="#cloud"/></svg>
-  <svg viewBox="0 0 210 112" class="cloud c2" data-depth="0.25"><use href="#cloud"/></svg>
-  <svg viewBox="0 0 210 112" class="cloud c3" data-depth="0.55"><use href="#cloud"/></svg>
-  <svg viewBox="0 0 210 112" class="cloud c4" data-depth="0.45"><use href="#cloud"/></svg>
-  <svg viewBox="0 0 210 112" class="cloud c5" data-depth="0.28"><use href="#cloud"/></svg>
-  <svg viewBox="0 0 210 112" class="cloud c6" data-depth="0.55"><use href="#cloud"/></svg>
-  <svg viewBox="0 0 210 112" class="cloud c7" data-depth="0.45"><use href="#cloud"/></svg>
-  <svg viewBox="0 0 210 112" class="cloud c8" data-depth="0.25"><use href="#cloud"/></svg>
-  <svg viewBox="0 0 210 112" class="cloud c9" data-depth="0.6"><use href="#cloud"/></svg>
-  <svg viewBox="0 0 210 112" class="cloud c10" data-depth="0.35"><use href="#cloud"/></svg>
+  <div class="sky-layer sky-far" data-speed="0.12"></div>
+  <div class="sky-layer sky-mid" data-speed="0.25"></div>
+  <div class="sky-layer sky-near" data-speed="0.42"></div>
 </div>
 
 <div class="dev-banner">🚧 האתר בשלב פיתוח — אין להשתמש בו להחלטות רפואיות בשלב זה 🚧</div>
@@ -463,29 +437,26 @@ function renderResult(med, weight) {
 }
 
 // ── Sky parallax ──
-// Clouds lag behind the scroll by their data-depth (0 = moves with the page,
-// higher = farther away and slower), which gives the sky a 3D feel. Each
-// cloud sits exactly at its designed spot when it is in the middle of the
-// screen. Skipped for users who ask for reduced motion.
-// (A function property, not a `let`: the page routing calls renderFreeForm
-// before this line is reached.)
+// The sky layers stay fixed while the page scrolls; each one is shifted up by
+// a fraction of the scroll (data-speed), so far clouds move slowest. One style
+// update per layer per frame keeps it smooth. Skipped for reduced motion.
 function startParallax() {
-  if (startParallax.done) return;
+  if (startParallax.done) return; // function property: routing runs before a `let` here would exist
   startParallax.done = true;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const clouds = [...document.querySelectorAll('.sky .cloud')].map(el => ({
-    // SVG elements have no offsetTop, so measure from the bounding box.
-    el, depth: parseFloat(el.dataset.depth) || 0, top: el.getBoundingClientRect().top + window.scrollY,
+  const layers = [...document.querySelectorAll('.sky-layer')].map(el => ({
+    el, speed: parseFloat(el.dataset.speed) || 0,
+    base: getComputedStyle(el).backgroundPosition.split(' ').map(v => parseFloat(v) || 0),
   }));
   let ticking = false;
   const update = () => {
     ticking = false;
-    const mid = window.scrollY + window.innerHeight / 2;
-    for (const c of clouds) c.el.style.translate = `0 ${Math.round((mid - c.top) * c.depth)}px`;
+    const y = window.scrollY;
+    for (const l of layers) l.el.style.backgroundPosition = `${l.base[0]}px ${l.base[1] - y * l.speed}px`;
   };
-  const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
-  window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onScroll);
+  window.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  }, { passive: true });
   update();
 }
 
