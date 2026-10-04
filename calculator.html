@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261004j">
-  <script src="config.js?v=20261004j"></script>
+  <link rel="stylesheet" href="style.css?v=20261004k">
+  <script src="config.js?v=20261004k"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 </head>
 <body>
@@ -433,8 +433,6 @@ function renderFreeForm() {
   document.body.classList.add('ff-page');
   main.innerHTML = `
     <div class="ff">
-      <!-- TEMP (design work only): fills the form with a sample case. Remove before real use. -->
-      <button type="button" class="ff-demo" id="ff-demo-btn">🧪 מילוי לדוגמה (זמני)</button>
       <div class="ff-cloud">
         <div class="ff-cloud-title">פרטים להדפסה ושליחה · לא חובה</div>
         <div class="ff-who">
@@ -657,15 +655,6 @@ function renderFreeForm() {
   });
 
   document.querySelector('.ff').addEventListener('input', updateLive);
-
-  // TEMP (design work only): sample case — 30 kg, 50–75 mg/kg/day, 3 doses, 250 mg / 5 ml.
-  $('ff-demo-btn').addEventListener('click', () => {
-    const sample = { 'ff-weight': 30, 'ff-dose-min': 50, 'ff-dose-max': 75, 'ff-doses': 3, 'ff-conc-mg': 250, 'ff-conc-ml': 5 };
-    for (const [id, v] of Object.entries(sample)) {
-      $(id).value = v;
-      $(id).dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  });
 
   updateLive();
 }
