@@ -52,6 +52,14 @@ body {
 }
 
 /* ── Layout ── */
+.credit {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  padding: 0 16px 10px;
+  background: #fff;
+}
+.credit a { color: var(--primary); text-decoration: none; }
 .app-header {
   background: #fff;
   border-bottom: 1px solid var(--gray-200);
@@ -655,6 +663,8 @@ input[type=number] { direction: ltr; text-align: right; }
   background-repeat: no-repeat;
   color: var(--navy);
 }
+.ff-page .credit { background: transparent; color: var(--navy); font-family: 'Varela Round', sans-serif; padding-top: 0; }
+.ff-page .credit a { color: var(--pink-dark); }
 .ff-page .app-header { background: var(--sky); border-bottom: none; justify-content: center; padding: 16px; }
 .ff-page .logo { gap: 12px; }
 .ff-page .logo-icon { background: var(--pink); width: 54px; height: 54px; border-radius: 16px; font-size: 28px; }
