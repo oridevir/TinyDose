@@ -724,6 +724,7 @@ input[type=number] { direction: ltr; text-align: right; }
 
 .ff-slider { padding: 0 6px; }
 .ff-slider input[type=range] { width: 100%; accent-color: var(--pink); height: 30px; }
+.ff-slider.is-empty input[type=range] { opacity: .45; }
 /* The weight slider reads like a number line, left to right (1 kg on the
    left), even on this RTL page. Each number sits at its true position, inset
    by the thumb radius so it lines up with the thumb's center. */
