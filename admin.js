@@ -444,21 +444,31 @@ async function loadProducts() {
   renderProductsTable();
 }
 
-function renderProductsTable() {
+// All the names a product can be found by: its own (he/en/aliases) and its drug's
+function productSearchText(p) {
+  const d = drugsData.find(x => x.id === p.drug_id);
+  return [p.brand_name, p.brand_name_en, p.search_aliases, d?.name_he, d?.name_en, d?.search_aliases]
+    .filter(Boolean).join(' ').toLowerCase();
+}
+
+window.renderProductsTable = function() {
   const tbody = document.getElementById('products-tbody');
   if (!productsData.length) { tbody.innerHTML = emptyRow(5, 'אין תכשירים עדיין'); return; }
-  const rows = [...productsData].sort((a, b) => drugName(a.drug_id).localeCompare(drugName(b.drug_id), 'he'));
+  const q = document.getElementById('product-filter').value.trim().toLowerCase();
+  const rows = productsData.filter(p => !q || productSearchText(p).includes(q))
+    .sort((a, b) => drugName(a.drug_id).localeCompare(drugName(b.drug_id), 'he'));
+  if (!rows.length) { tbody.innerHTML = emptyRow(5, 'אין תוצאות לחיפוש'); return; }
   tbody.innerHTML = rows.map(p => `
     <tr>
       <td>${esc(drugName(p.drug_id))}</td>
-      <td><strong>${esc(p.brand_name)}</strong></td>
+      <td><strong>${esc(p.brand_name)}</strong>${p.brand_name_en ? `<div dir="ltr" style="font-size:.75rem;color:var(--gray-500);text-align:right;">${esc(p.brand_name_en)}</div>` : ''}${p.search_aliases ? `<div style="font-size:.75rem;color:var(--gray-400);">${esc(p.search_aliases)}</div>` : ''}</td>
       <td>${concLabel(p)}<div style="font-size:.75rem;color:var(--gray-500);">= ${round2(p.conc_mg / p.conc_ml)} מ"ג/מ"ל</div></td>
       <td style="font-size:.8rem;">${p.parent_note ? esc(p.parent_note) : '—'}</td>
       <td>${rowActions('product', p.id)}</td>
     </tr>
   `).join('');
   bindRowActions(tbody, 'product', openProductModal, deleteProduct);
-}
+};
 
 function updateProductConcResult() {
   const mg = numOrNull('pf-conc-mg');
@@ -477,6 +487,8 @@ window.openProductModal = function(id) {
   document.getElementById('pf-id').value = p?.id || '';
   document.getElementById('pf-drug-id').value = p?.drug_id || '';
   document.getElementById('pf-brand').value = p?.brand_name || '';
+  document.getElementById('pf-brand-en').value = p?.brand_name_en || '';
+  document.getElementById('pf-aliases').value = p?.search_aliases || '';
   document.getElementById('pf-conc-mg').value = p?.conc_mg ?? '';
   document.getElementById('pf-conc-ml').value = p?.conc_ml ?? '';
   document.getElementById('pf-parent-note').value = p?.parent_note || '';
@@ -493,6 +505,8 @@ window.saveProduct = async function(e) {
   const payload = {
     drug_id: document.getElementById('pf-drug-id').value || null,
     brand_name: document.getElementById('pf-brand').value.trim(),
+    brand_name_en: textOrNull('pf-brand-en'),
+    search_aliases: textOrNull('pf-aliases'),
     conc_mg: numOrNull('pf-conc-mg'),
     conc_ml: numOrNull('pf-conc-ml'),
     parent_note: textOrNull('pf-parent-note'),
@@ -539,7 +553,9 @@ window.renderRecsTable = function() {
       if (!q) return true;
       const d = drugsData.find(x => x.id === r.drug_id);
       const hay = [indicationsData.find(x => x.id === r.indication_id)?.name_he,
-        d?.name_he, d?.name_en, d?.search_aliases].filter(Boolean).join(' ').toLowerCase();
+        d?.name_he, d?.name_en, d?.search_aliases,
+        ...productsData.filter(p => p.drug_id === r.drug_id).map(productSearchText)]
+        .filter(Boolean).join(' ').toLowerCase();
       return hay.includes(q);
     })
     .sort((a, b) =>

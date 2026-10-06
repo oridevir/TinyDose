@@ -71,3 +71,7 @@ create policy "Read verified or auth recommendations" on recommendations for sel
 create policy "Auth insert recommendations" on recommendations for insert with check ((select auth.role()) = 'authenticated');
 create policy "Auth update recommendations" on recommendations for update using ((select auth.role()) = 'authenticated');
 create policy "Auth delete recommendations" on recommendations for delete using ((select auth.role()) = 'authenticated');
+
+-- שלב 1ב (2026-10-06): חיפוש תכשיר לפי שמות שונים
+alter table products add column if not exists brand_name_en text;    -- שם מסחרי באנגלית
+alter table products add column if not exists search_aliases text;   -- שמות נוספים לחיפוש, מופרדים בפסיק
