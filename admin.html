@@ -50,42 +50,98 @@
   <main class="admin-layout" style="padding:16px;max-width:960px;margin:0 auto;">
 
     <!-- Admin tabs -->
-    <div class="mode-tabs" style="margin-bottom:16px;">
-      <button class="mode-tab active" onclick="showAdminTab('meds')" id="admin-tab-meds">💊 תרופות</button>
-      <button class="mode-tab" onclick="showAdminTab('indications')" id="admin-tab-indications">🩺 אינדיקציות</button>
+    <div class="mode-tabs" style="margin-bottom:16px;flex-wrap:wrap;">
+      <button class="mode-tab active" onclick="showAdminTab('recs')" id="admin-tab-recs">📋 המלצות</button>
+      <button class="mode-tab" onclick="showAdminTab('drugs')" id="admin-tab-drugs">💊 תרופות</button>
+      <button class="mode-tab" onclick="showAdminTab('products')" id="admin-tab-products">🧴 תכשירים</button>
+      <button class="mode-tab" onclick="showAdminTab('indications')" id="admin-tab-indications">🩺 אבחנות</button>
       <button class="mode-tab" onclick="showAdminTab('cats')" id="admin-tab-cats">🏷️ קטגוריות</button>
     </div>
 
-    <!-- ── Medications section ── -->
-    <div id="admin-section-meds">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h2 style="font-size:1.2rem;font-weight:700;">תרופות ומינונים</h2>
-        <button class="btn btn-primary" onclick="openModal()">+ הוסף תרופה</button>
+    <!-- ── Recommendations section ── -->
+    <div id="admin-section-recs">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;">
+        <h2 style="font-size:1.2rem;font-weight:700;">המלצות טיפול לפי אבחנה</h2>
+        <button class="btn btn-primary" onclick="openRecModal()">+ הוסף המלצה</button>
       </div>
-
-      <div class="card" style="padding:12px 16px;margin-bottom:12px;">
-        <input type="text" id="filter-input" placeholder="סנן לפי שם תרופה / אינדיקציה..." oninput="filterTable()">
+      <div class="card" style="padding:12px 16px;margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="rec-filter" placeholder="סנן לפי אבחנה / תרופה..." oninput="renderRecsTable()" style="flex:1;min-width:180px;">
+        <select id="rec-status-filter" onchange="renderRecsTable()" style="width:auto;">
+          <option value="">כל הסטטוסים</option>
+          <option value="draft">טיוטה בלבד</option>
+          <option value="verified">מאומת בלבד</option>
+        </select>
       </div>
-
       <div class="card" style="padding:0;">
         <div class="table-wrap">
-          <table class="admin-table" id="meds-table">
+          <table class="admin-table">
             <thead>
               <tr>
-                <th>אינדיקציה</th>
+                <th>אבחנה</th>
+                <th>קו טיפול</th>
                 <th>תרופה</th>
                 <th>מינון (מ"ג/ק"ג/י)</th>
-                <th>ריכוז</th>
-                <th>פעמים/י</th>
-                <th>מקסימום</th>
-                <th>קטגוריה</th>
+                <th>מנות/י</th>
+                <th>משך</th>
+                <th>סטטוס</th>
                 <th>פעולות</th>
               </tr>
             </thead>
-            <tbody id="meds-tbody">
-              <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--gray-400);">
-                <div class="spinner"></div>
-              </td></tr>
+            <tbody id="recs-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--gray-400);"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Drugs section ── -->
+    <div id="admin-section-drugs" class="hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;">
+        <h2 style="font-size:1.2rem;font-weight:700;">תרופות (שם גנרי)</h2>
+        <button class="btn btn-primary" onclick="openDrugModal()">+ הוסף תרופה</button>
+      </div>
+      <div class="card" style="padding:0;">
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>שם (עברית)</th>
+                <th>שם (אנגלית)</th>
+                <th>מקסימום יומי</th>
+                <th>תכשירים</th>
+                <th>המלצות</th>
+                <th>פעולות</th>
+              </tr>
+            </thead>
+            <tbody id="drugs-tbody">
+              <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-400);"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Products section ── -->
+    <div id="admin-section-products" class="hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;">
+        <h2 style="font-size:1.2rem;font-weight:700;">תכשירים (שם מסחרי וריכוז)</h2>
+        <button class="btn btn-primary" onclick="openProductModal()">+ הוסף תכשיר</button>
+      </div>
+      <div class="card" style="padding:0;">
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>תרופה</th>
+                <th>שם מסחרי</th>
+                <th>ריכוז</th>
+                <th>הערה להורים</th>
+                <th>פעולות</th>
+              </tr>
+            </thead>
+            <tbody id="products-tbody">
+              <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--gray-400);"><div class="spinner"></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -95,8 +151,8 @@
     <!-- ── Indications section ── -->
     <div id="admin-section-indications" class="hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h2 style="font-size:1.2rem;font-weight:700;">אינדיקציות</h2>
-        <button class="btn btn-primary" onclick="openIndicationModal()">+ הוסף אינדיקציה</button>
+        <h2 style="font-size:1.2rem;font-weight:700;">אבחנות</h2>
+        <button class="btn btn-primary" onclick="openIndicationModal()">+ הוסף אבחנה</button>
       </div>
 
       <div class="card" style="padding:0;">
@@ -151,114 +207,151 @@
   </main>
 </div>
 
-<!-- Modal: Add/Edit Medication -->
-<div class="modal-overlay hidden" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+<!-- Modal: Add/Edit Recommendation -->
+<div class="modal-overlay hidden" id="rec-modal-overlay" onclick="if(event.target===this)closeRecModal()">
   <div class="modal">
-    <div class="modal-title" id="modal-title">הוסף תרופה</div>
-    <form id="med-form" onsubmit="saveMed(event)">
-      <input type="hidden" id="f-id">
+    <div class="modal-title" id="rec-modal-title">הוסף המלצה</div>
+    <form id="rec-form" onsubmit="saveRec(event)">
+      <input type="hidden" id="rf-id">
       <div class="form-grid">
-
-        <!-- Indication select + inline create -->
         <div class="field full">
-          <label>אינדיקציה *</label>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <select id="f-indication-id" style="flex:1;" required>
-              <option value="">— בחר אינדיקציה —</option>
-            </select>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleNewIndicationForm()">＋ חדשה</button>
-          </div>
-          <!-- Inline create indication -->
-          <div id="new-indication-form" class="hidden" style="border:1px solid var(--gray-200);border-radius:8px;padding:12px;margin-top:8px;background:var(--gray-50);">
-            <div style="font-size:.85rem;font-weight:600;margin-bottom:8px;color:var(--gray-700);">אינדיקציה חדשה</div>
-            <div class="form-grid">
-              <div class="field full">
-                <label>שם (עברית) *</label>
-                <input type="text" id="ni-name-he" placeholder="לדוגמה: אוטיטיס מדיה">
-              </div>
-              <div class="field full">
-                <label>שם (אנגלית)</label>
-                <input type="text" id="ni-name-en" placeholder="e.g. Otitis Media" dir="ltr">
-              </div>
-              <div class="field full">
-                <label>קטגוריה</label>
-                <select id="ni-category-id">
-                  <option value="">ללא קטגוריה (כללי)</option>
-                </select>
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:4px;">
-              <button type="button" class="btn btn-primary btn-sm" onclick="saveNewIndication()">צור אינדיקציה</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="toggleNewIndicationForm()">ביטול</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="field full">
-          <label>שם תרופה *</label>
-          <input type="text" id="f-drug" required placeholder="דוג׳ אמוקסיצילין">
+          <label>אבחנה *</label>
+          <select id="rf-indication-id" required></select>
         </div>
         <div class="field full">
-          <label>קטגוריה</label>
-          <select id="f-category-id">
-            <option value="">ללא קטגוריה (כללי)</option>
+          <label>תרופה *</label>
+          <select id="rf-drug-id" required onchange="showRecDrugInfo()"></select>
+          <p id="rf-drug-info" style="font-size:.75rem;color:var(--gray-500);margin-top:4px;"></p>
+        </div>
+        <div class="field full">
+          <label>קו טיפול *</label>
+          <select id="rf-line" required>
+            <option value="first">קו ראשון</option>
+            <option value="alternative">חלופה</option>
+            <option value="allergy">אלרגיה לפניצילין</option>
           </select>
         </div>
-        <div class="field full">
-          <label>תווית ריכוז (לזיהוי תכשיר)</label>
-          <input type="text" id="f-concentration-label" placeholder="דוג׳ 250mg/5ml" dir="ltr">
-          <p style="font-size:.75rem;color:var(--gray-400);margin-top:4px;">משמש להבחנה אם אותה תרופה קיימת בכמה ריכוזים שונים</p>
+        <div class="field">
+          <label>מינון (מ"ג/ק"ג/יום) *</label>
+          <input type="number" id="rf-dose-min" required min="0" step="any" dir="ltr">
         </div>
         <div class="field">
-          <label>מינון מינימום (מ"ג/ק"ג/יום) *</label>
-          <input type="number" id="f-dose-min" required min="0" step="any" dir="ltr">
-        </div>
-        <div class="field">
-          <label>מינון מקסימום (מ"ג/ק"ג/יום)</label>
-          <input type="number" id="f-dose-max" min="0" step="any" dir="ltr" placeholder="ריק = מינון קבוע">
-        </div>
-        <div class="field">
-          <label>ריכוז (מ"ג/מ"ל) *</label>
-          <input type="number" id="f-concentration" required min="0" step="any" dir="ltr">
+          <label>עד (מ"ג/ק"ג/יום)</label>
+          <input type="number" id="rf-dose-max" min="0" step="any" dir="ltr" placeholder="ריק = מינון קבוע">
         </div>
         <div class="field">
           <label>מנות ביום *</label>
-          <input type="number" id="f-doses-per-day" required min="1" max="6" step="1" dir="ltr">
+          <input type="number" id="rf-doses" required min="1" max="6" step="1" dir="ltr">
         </div>
         <div class="field">
           <label>משך טיפול (ימים)</label>
-          <input type="number" id="f-duration-days" min="1" step="1" dir="ltr" placeholder="לא חובה">
+          <input type="number" id="rf-duration" min="1" step="1" dir="ltr" placeholder="לא חובה">
         </div>
         <div class="field full">
-          <label>מינון מקסימום יומי מוחלט (מ"ג) *</label>
-          <input type="number" id="f-max-daily" required min="0" step="any" dir="ltr">
+          <label>הערה לרופא</label>
+          <textarea id="rf-doctor-note" rows="2" placeholder="מוצגת רק בחלון המינון"></textarea>
         </div>
         <div class="field full">
-          <label>מינון מקסימלי יומי למבוגר (מ"ג)</label>
-          <input type="number" id="f-adult-max-daily" min="0" step="any" dir="ltr" placeholder="לא חובה — מאפשר חישוב מ&quot;ל אוטומטי בעת חריגה">
-          <p style="font-size:.75rem;color:var(--gray-400);margin-top:4px;">המערכת תחשב את נפח המבוגרים באותו ריכוז ומספר מנות כמו הילדים</p>
+          <label>הערה להורים</label>
+          <textarea id="rf-parent-note" rows="2" placeholder="עוברת לשדה &quot;הערות להורים&quot; (תדפיס ווואטסאפ)"></textarea>
         </div>
         <div class="field full">
-          <label>הערת מינון מבוגר (טקסט חופשי נוסף)</label>
-          <input type="text" id="f-adult-note" placeholder="לדוגמה: תכשיר מבוגרים שונה (כדורים)">
+          <label>מקור</label>
+          <input type="text" id="rf-source" placeholder="לדוגמה: הנחיות האיגוד לרפואת ילדים 2025">
         </div>
-        <div class="field full">
-          <label>הערות קליניות</label>
-          <textarea id="f-notes" rows="2" placeholder="הערות נוספות לרופא..."></textarea>
+        <div class="field">
+          <label>סטטוס *</label>
+          <select id="rf-status">
+            <option value="draft">📝 טיוטה (לא מוצג באתר)</option>
+            <option value="verified">✅ מאומת (מוצג באתר)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>סדר תצוגה</label>
+          <input type="number" id="rf-sort" min="0" step="1" dir="ltr" value="0">
         </div>
       </div>
-
       <!-- Preview -->
-      <div id="preview-area"></div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;margin-top:8px;">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="previewCalc()">👁️ תצוגה מקדימה</button>
-        <input type="number" id="preview-weight" placeholder="משקל לדוגמה" min="1" max="120" step="0.5" style="width:130px;" dir="ltr">
-        <span style="font-size:.85rem;color:var(--gray-500);line-height:2.2;">ק"ג</span>
+      <div id="rec-preview-area"></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;margin-top:8px;flex-wrap:wrap;align-items:center;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="previewRec()">👁️ תצוגה מקדימה</button>
+        <input type="number" id="rec-preview-weight" placeholder="משקל לדוגמה" min="1" max="120" step="0.5" style="width:130px;" dir="ltr">
+        <span style="font-size:.85rem;color:var(--gray-500);">ק"ג</span>
       </div>
-
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeModal()">ביטול</button>
-        <button type="submit" class="btn btn-primary" id="save-btn">שמור</button>
+        <button type="button" class="btn btn-secondary" onclick="closeRecModal()">ביטול</button>
+        <button type="submit" class="btn btn-primary" id="rec-save-btn">שמור</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Add/Edit Drug -->
+<div class="modal-overlay hidden" id="drug-modal-overlay" onclick="if(event.target===this)closeDrugModal()">
+  <div class="modal">
+    <div class="modal-title" id="drug-modal-title">הוסף תרופה</div>
+    <form id="drug-form" onsubmit="saveDrug(event)">
+      <input type="hidden" id="df-id">
+      <div class="form-grid">
+        <div class="field full">
+          <label>שם גנרי (עברית) *</label>
+          <input type="text" id="df-name-he" required placeholder="לדוגמה: אמוקסיצילין">
+        </div>
+        <div class="field full">
+          <label>שם גנרי (אנגלית)</label>
+          <input type="text" id="df-name-en" placeholder="e.g. Amoxicillin" dir="ltr">
+        </div>
+        <div class="field full">
+          <label>שמות נוספים לחיפוש</label>
+          <input type="text" id="df-aliases" placeholder="מופרדים בפסיק, לדוגמה: אמוקסצילין, amoxycillin">
+        </div>
+        <div class="field full">
+          <label>מקסימום יומי (מ"ג)</label>
+          <input type="number" id="df-max-daily" min="0" step="any" dir="ltr" placeholder="לא חובה">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeDrugModal()">ביטול</button>
+        <button type="submit" class="btn btn-primary" id="drug-save-btn">שמור</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Add/Edit Product -->
+<div class="modal-overlay hidden" id="product-modal-overlay" onclick="if(event.target===this)closeProductModal()">
+  <div class="modal">
+    <div class="modal-title" id="product-modal-title">הוסף תכשיר</div>
+    <form id="product-form" onsubmit="saveProduct(event)">
+      <input type="hidden" id="pf-id">
+      <div class="form-grid">
+        <div class="field full">
+          <label>תרופה (חומר פעיל) *</label>
+          <select id="pf-drug-id" required></select>
+        </div>
+        <div class="field full">
+          <label>שם מסחרי *</label>
+          <input type="text" id="pf-brand" required placeholder="לדוגמה: מוקסיפן 250">
+        </div>
+        <div class="field">
+          <label>ריכוז: מ"ג *</label>
+          <input type="number" id="pf-conc-mg" required min="0" step="any" dir="ltr" placeholder="250">
+        </div>
+        <div class="field">
+          <label>ב-מ"ל *</label>
+          <input type="number" id="pf-conc-ml" required min="0" step="any" dir="ltr" placeholder="5">
+        </div>
+        <div class="field full">
+          <p id="pf-conc-result" style="font-size:.8rem;color:var(--gray-500);"></p>
+        </div>
+        <div class="field full">
+          <label>הערה להורים</label>
+          <textarea id="pf-parent-note" rows="2" placeholder="לדוגמה: לשמור במקרר אחרי הכנה, לנער לפני שימוש"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeProductModal()">ביטול</button>
+        <button type="submit" class="btn btn-primary" id="product-save-btn">שמור</button>
       </div>
     </form>
   </div>
@@ -267,16 +360,16 @@
 <!-- Modal: Add/Edit Indication -->
 <div class="modal-overlay hidden" id="indication-modal-overlay" onclick="if(event.target===this)closeIndicationModal()">
   <div class="modal">
-    <div class="modal-title" id="indication-modal-title">הוסף אינדיקציה</div>
+    <div class="modal-title" id="indication-modal-title">הוסף אבחנה</div>
     <form id="indication-form" onsubmit="saveIndication(event)">
       <input type="hidden" id="if-id">
       <div class="form-grid">
         <div class="field full">
-          <label>שם אינדיקציה (עברית) *</label>
+          <label>שם אבחנה (עברית) *</label>
           <input type="text" id="if-name-he" required placeholder="לדוגמה: אוטיטיס מדיה">
         </div>
         <div class="field full">
-          <label>שם אינדיקציה (אנגלית)</label>
+          <label>שם אבחנה (אנגלית)</label>
           <input type="text" id="if-name-en" placeholder="e.g. Otitis Media" dir="ltr">
         </div>
         <div class="field full">

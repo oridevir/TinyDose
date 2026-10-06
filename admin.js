@@ -1,9 +1,13 @@
 // admin.js
 import { supabase, round2, esc, calculateDose } from './app.js';
 
-let medsData = [];
 let indicationsData = [];
 let categoriesData = [];
+let drugsData = [];
+let productsData = [];
+let recsData = [];
+
+const LINE_LABELS = { first: 'קו ראשון', alternative: 'חלופה', allergy: 'אלרגיה לפניצילין' };
 
 // ── Auth ──
 async function init() {
@@ -20,8 +24,8 @@ async function showAdmin(email) {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('admin-app').classList.remove('hidden');
   document.getElementById('admin-email').textContent = email;
-  await Promise.all([loadCategories(), loadIndications()]);
-  loadMeds();
+  await Promise.all([loadCategories(), loadIndications(), loadDrugs(), loadProducts()]);
+  await loadRecs();
 }
 
 function showLogin() {
@@ -55,7 +59,7 @@ window.doLogout = async function() {
 
 // ── Tab switching ──
 window.showAdminTab = function(tab) {
-  ['meds', 'indications', 'cats'].forEach(t => {
+  ['recs', 'drugs', 'products', 'indications', 'cats'].forEach(t => {
     document.getElementById(`admin-section-${t}`).classList.toggle('hidden', t !== tab);
     document.getElementById(`admin-tab-${t}`).classList.toggle('active', t === tab);
   });
@@ -72,11 +76,6 @@ function indicationName(indicationId) {
   if (!indicationId) return '—';
   const ind = indicationsData.find(x => x.id === indicationId);
   return ind ? esc(ind.name_he) : '—';
-}
-
-function indicationCatName(indicationId) {
-  const ind = indicationsData.find(x => x.id === indicationId);
-  return ind?.category_id ? catName(ind.category_id) : '—';
 }
 
 // ── Categories ──
@@ -119,19 +118,9 @@ function populateCategorySelects() {
   const options = '<option value="">ללא קטגוריה (כללי)</option>' +
     categoriesData.map(c => `<option value="${esc(c.id)}">${esc(c.name_he)}</option>`).join('');
 
-  ['f-category-id', 'if-category-id', 'ni-category-id', 'cf-id'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && el.tagName === 'SELECT' && id !== 'cf-id') {
-      const cur = el.value;
-      el.innerHTML = options;
-      if (cur) el.value = cur;
-    }
-  });
+  const el = document.getElementById('if-category-id');
+  if (el) { const cur = el.value; el.innerHTML = options; if (cur) el.value = cur; }
 
-  // f-category-id for med modal (category of the med itself — kept for now,
-  // but category is on indication not med after migration)
-  const medCatSel = document.getElementById('f-category-id');
-  if (medCatSel) { const cur = medCatSel.value; medCatSel.innerHTML = options; if (cur) medCatSel.value = cur; }
 }
 
 window.openCatModal = function(id) {
@@ -176,14 +165,13 @@ window.saveCat = async function(e) {
   closeCatModal();
   await loadCategories();
   renderIndicationsTable(indicationsData);
-  renderTable(medsData);
 };
 
 window.deleteCat = async function(id) {
   const c = categoriesData.find(x => x.id === id);
   const linkedInds = indicationsData.filter(i => i.category_id === id).length;
   const msg = linkedInds > 0
-    ? `למחוק את הקטגוריה "${c?.name_he}"?\n${linkedInds} אינדיקציה/ות תחזורנה ל"כללי / לא ממוין".`
+    ? `למחוק את הקטגוריה "${c?.name_he}"?\n${linkedInds} אבחנה/ות תחזורנה ל"כללי / לא ממוין".`
     : `למחוק את הקטגוריה "${c?.name_he}"?`;
   if (!confirm(msg)) return;
   const { error } = await supabase.from('categories').delete().eq('id', id);
@@ -191,13 +179,12 @@ window.deleteCat = async function(id) {
   showToast('נמחק ✓');
   await loadCategories();
   await loadIndications();
-  renderTable(medsData);
 };
 
 // ── Indications ──
 async function loadIndications() {
   const { data, error } = await supabase.from('indications').select('*').order('name_he');
-  if (error) { showToast('שגיאה בטעינת אינדיקציות'); return; }
+  if (error) { showToast('שגיאה בטעינת אבחנות'); return; }
   indicationsData = data || [];
   renderIndicationsTable(indicationsData);
   populateIndicationSelect();
@@ -206,7 +193,7 @@ async function loadIndications() {
 function renderIndicationsTable(inds) {
   const tbody = document.getElementById('indications-tbody');
   if (!inds.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--gray-400);">אין אינדיקציות מוגדרות</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--gray-400);">אין אבחנות מוגדרות</td></tr>';
     return;
   }
   tbody.innerHTML = inds.map(ind => `
@@ -231,9 +218,9 @@ function renderIndicationsTable(inds) {
 }
 
 function populateIndicationSelect() {
-  const options = '<option value="">— בחר אינדיקציה —</option>' +
+  const options = '<option value="">— בחר אבחנה —</option>' +
     indicationsData.map(ind => `<option value="${esc(ind.id)}">${esc(ind.name_he)}${ind.category_id ? ` (${catName(ind.category_id)})` : ''}</option>`).join('');
-  const sel = document.getElementById('f-indication-id');
+  const sel = document.getElementById('rf-indication-id');
   if (sel) { const cur = sel.value; sel.innerHTML = options; if (cur) sel.value = cur; }
 }
 
@@ -244,7 +231,7 @@ window.openIndicationModal = function(id) {
     categoriesData.map(c => `<option value="${esc(c.id)}">${esc(c.name_he)}</option>`).join('');
   document.getElementById('if-category-id').innerHTML = catOptions;
 
-  document.getElementById('indication-modal-title').textContent = ind ? 'עריכת אינדיקציה' : 'הוסף אינדיקציה';
+  document.getElementById('indication-modal-title').textContent = ind ? 'עריכת אבחנה' : 'הוסף אבחנה';
   document.getElementById('if-id').value = ind?.id || '';
   document.getElementById('if-name-he').value = ind?.name_he || '';
   document.getElementById('if-name-en').value = ind?.name_en || '';
@@ -264,7 +251,7 @@ window.saveIndication = async function(e) {
     category_id: document.getElementById('if-category-id').value || null,
     updated_at: new Date().toISOString(),
   };
-  if (!payload.name_he) { showToast('יש להזין שם אינדיקציה'); return; }
+  if (!payload.name_he) { showToast('יש להזין שם אבחנה'); return; }
 
   const btn = document.getElementById('indication-save-btn');
   btn.disabled = true; btn.textContent = 'שומר...';
@@ -283,276 +270,424 @@ window.saveIndication = async function(e) {
   showToast(id ? 'עודכן בהצלחה ✓' : 'נוסף בהצלחה ✓');
   closeIndicationModal();
   await loadIndications();
-  renderTable(medsData);
+  renderRecsTable();
 };
 
 window.deleteIndication = async function(id) {
   const ind = indicationsData.find(x => x.id === id);
-  const linkedMeds = medsData.filter(m => m.indication_id === id);
-  if (linkedMeds.length > 0) {
+  const linked = recsData.filter(r => r.indication_id === id);
+  if (linked.length > 0) {
     alert(
-      `לא ניתן למחוק את האינדיקציה "${ind?.name_he}" — יש לה ${linkedMeds.length} תרופה/ות משויכות:\n` +
-      linkedMeds.map(m => `• ${m.drug_name}`).join('\n') +
-      '\n\nשנה תחילה את שיוך התרופות הללו לאינדיקציה אחרת.'
+      `לא ניתן למחוק את האבחנה "${ind?.name_he}" — יש לה ${linked.length} המלצה/ות:\n` +
+      linked.map(r => `• ${drugName(r.drug_id)}`).join('\n') +
+      '\n\nיש למחוק או להעביר קודם את ההמלצות האלה.'
     );
     return;
   }
-  if (!confirm(`למחוק את האינדיקציה "${ind?.name_he}"?`)) return;
+  if (!confirm(`למחוק את האבחנה "${ind?.name_he}"?`)) return;
   const { error } = await supabase.from('indications').delete().eq('id', id);
-  if (error) { showToast('שגיאה במחיקה: ' + error.message); return; }
+  if (error) { showToast(isFkError(error) ? 'לא ניתן למחוק — האבחנה עדיין בשימוש' : 'שגיאה במחיקה: ' + error.message); return; }
   showToast('נמחק ✓');
   await loadIndications();
 };
 
-// ── Inline create indication (within medication modal) ──
-window.toggleNewIndicationForm = function() {
-  const form = document.getElementById('new-indication-form');
-  const isHidden = form.classList.toggle('hidden');
-  if (!isHidden) {
-    // populate category select with current data
-    const catOptions = '<option value="">ללא קטגוריה (כללי)</option>' +
-      categoriesData.map(c => `<option value="${esc(c.id)}">${esc(c.name_he)}</option>`).join('');
-    document.getElementById('ni-category-id').innerHTML = catOptions;
-    document.getElementById('ni-name-he').value = '';
-    document.getElementById('ni-name-en').value = '';
-    document.getElementById('ni-name-he').focus();
-  }
-};
-
-window.saveNewIndication = async function() {
-  const nameHe = document.getElementById('ni-name-he').value.trim();
-  if (!nameHe) { showToast('יש להזין שם אינדיקציה'); return; }
-
-  const payload = {
-    name_he: nameHe,
-    name_en: document.getElementById('ni-name-en').value.trim() || null,
-    category_id: document.getElementById('ni-category-id').value || null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-
-  const { data, error } = await supabase.from('indications').insert(payload).select().single();
-  if (error) { showToast('שגיאה ביצירת אינדיקציה: ' + error.message); return; }
-
-  showToast('אינדיקציה נוצרה ✓');
-  await loadIndications();
-
-  // Select the newly created indication
-  document.getElementById('f-indication-id').value = data.id;
-  document.getElementById('new-indication-form').classList.add('hidden');
-};
-
-// ── Medications table ──
-async function loadMeds() {
-  const { data, error } = await supabase
-    .from('medications')
-    .select('*')
-    .order('indication_id');
-  if (error) { showToast('שגיאה בטעינה'); return; }
-  medsData = data || [];
-  renderTable(medsData);
+// ── Shared helpers for the drug database (drugs / products / recommendations) ──
+function drugName(drugId) {
+  return drugsData.find(d => d.id === drugId)?.name_he || '—';
 }
 
-function renderTable(meds) {
-  const tbody = document.getElementById('meds-tbody');
-  if (!meds.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--gray-400);">אין נתונים</td></tr>';
-    return;
+function numOrNull(id) {
+  const v = document.getElementById(id).value;
+  return v === '' ? null : parseFloat(v);
+}
+
+function intOrNull(id) {
+  const v = document.getElementById(id).value;
+  return v === '' ? null : parseInt(v, 10);
+}
+
+function textOrNull(id) {
+  return document.getElementById(id).value.trim() || null;
+}
+
+// Postgres foreign-key violation (row still referenced by another table)
+function isFkError(error) {
+  return error?.code === '23503';
+}
+
+function concLabel(p) {
+  return `${p.conc_mg} מ"ג / ${p.conc_ml} מ"ל`;
+}
+
+function emptyRow(cols, text) {
+  return `<tr><td colspan="${cols}" style="text-align:center;padding:30px;color:var(--gray-400);">${text}</td></tr>`;
+}
+
+function rowActions(kind, id) {
+  return `
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-secondary btn-sm" data-${kind}-edit="${esc(id)}">עריכה</button>
+      <button class="btn btn-danger btn-sm" data-${kind}-delete="${esc(id)}">מחק</button>
+    </div>`;
+}
+
+function bindRowActions(tbody, kind, onEdit, onDelete) {
+  tbody.querySelectorAll(`[data-${kind}-edit]`).forEach(btn =>
+    btn.addEventListener('click', () => onEdit(btn.getAttribute(`data-${kind}-edit`)))
+  );
+  tbody.querySelectorAll(`[data-${kind}-delete]`).forEach(btn =>
+    btn.addEventListener('click', () => onDelete(btn.getAttribute(`data-${kind}-delete`)))
+  );
+}
+
+function drugOptions(placeholder) {
+  return `<option value="">${placeholder}</option>` +
+    drugsData.map(d => `<option value="${esc(d.id)}">${esc(d.name_he)}${d.name_en ? ` (${esc(d.name_en)})` : ''}</option>`).join('');
+}
+
+// Insert or update one row; returns the Supabase error (or null)
+async function saveRow(table, id, payload, btn) {
+  btn.disabled = true; btn.textContent = 'שומר...';
+  payload.updated_at = new Date().toISOString();
+  let error;
+  if (id) {
+    ({ error } = await supabase.from(table).update(payload).eq('id', id));
+  } else {
+    ({ error } = await supabase.from(table).insert(payload));
   }
-  tbody.innerHTML = meds.map(m => `
+  btn.disabled = false; btn.textContent = 'שמור';
+  if (error) showToast('שגיאה בשמירה: ' + error.message);
+  else showToast(id ? 'עודכן בהצלחה ✓' : 'נוסף בהצלחה ✓');
+  return error;
+}
+
+// ── Drugs ──
+async function loadDrugs() {
+  const { data, error } = await supabase.from('drugs').select('*').order('name_he');
+  if (error) { showToast('שגיאה בטעינת תרופות'); return; }
+  drugsData = data || [];
+  renderDrugsTable();
+}
+
+function renderDrugsTable() {
+  const tbody = document.getElementById('drugs-tbody');
+  if (!drugsData.length) { tbody.innerHTML = emptyRow(6, 'אין תרופות עדיין'); return; }
+  tbody.innerHTML = drugsData.map(d => `
     <tr>
-      <td>${indicationName(m.indication_id)}</td>
-      <td>
-        <strong>${esc(m.drug_name)}</strong>
-        ${m.concentration_label ? `<div style="font-size:.75rem;color:var(--gray-500);">${esc(m.concentration_label)}</div>` : ''}
-      </td>
-      <td>${m.dose_min_mg_per_kg_day}${m.dose_max_mg_per_kg_day ? '–' + m.dose_max_mg_per_kg_day : ''}</td>
-      <td>${m.concentration_mg_per_ml} מ"ג/מ"ל</td>
-      <td>${m.doses_per_day}${m.duration_days ? ` · ${m.duration_days}י׳` : ''}</td>
-      <td>${m.max_daily_dose_mg} מ"ג</td>
-      <td>${indicationCatName(m.indication_id)}</td>
-      <td>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-secondary btn-sm" data-edit="${esc(m.id)}">עריכה</button>
-          <button class="btn btn-danger btn-sm" data-delete="${esc(m.id)}">מחק</button>
-        </div>
-      </td>
+      <td><strong>${esc(d.name_he)}</strong>${d.search_aliases ? `<div style="font-size:.75rem;color:var(--gray-500);">${esc(d.search_aliases)}</div>` : ''}</td>
+      <td dir="ltr" style="text-align:right;">${d.name_en ? esc(d.name_en) : '—'}</td>
+      <td>${d.max_daily_dose_mg != null ? `${d.max_daily_dose_mg} מ"ג` : '—'}</td>
+      <td>${productsData.filter(p => p.drug_id === d.id).length}</td>
+      <td>${recsData.filter(r => r.drug_id === d.id).length}</td>
+      <td>${rowActions('drug', d.id)}</td>
     </tr>
   `).join('');
-
-  tbody.querySelectorAll('[data-edit]').forEach(btn =>
-    btn.addEventListener('click', () => openModal(btn.getAttribute('data-edit')))
-  );
-  tbody.querySelectorAll('[data-delete]').forEach(btn =>
-    btn.addEventListener('click', () => deleteMed(btn.getAttribute('data-delete')))
-  );
+  bindRowActions(tbody, 'drug', openDrugModal, deleteDrug);
 }
 
-window.filterTable = function() {
-  const q = document.getElementById('filter-input').value.toLowerCase();
-  const filtered = medsData.filter(m => {
-    const indHe = indicationsData.find(x => x.id === m.indication_id)?.name_he || '';
-    return m.drug_name.toLowerCase().includes(q) || indHe.includes(q);
-  });
-  renderTable(filtered);
+window.openDrugModal = function(id) {
+  const d = id ? drugsData.find(x => x.id === id) : null;
+  document.getElementById('drug-modal-title').textContent = d ? 'עריכת תרופה' : 'הוסף תרופה';
+  document.getElementById('df-id').value = d?.id || '';
+  document.getElementById('df-name-he').value = d?.name_he || '';
+  document.getElementById('df-name-en').value = d?.name_en || '';
+  document.getElementById('df-aliases').value = d?.search_aliases || '';
+  document.getElementById('df-max-daily').value = d?.max_daily_dose_mg ?? '';
+  document.getElementById('drug-modal-overlay').classList.remove('hidden');
 };
 
-// ── Medication modal ──
-window.openModal = function(id) {
-  const m = id ? medsData.find(x => x.id === id) : null;
-  populateIndicationSelect();
-
-  document.getElementById('modal-title').textContent = m ? 'עריכת תרופה' : 'הוסף תרופה';
-  document.getElementById('f-id').value = m?.id || '';
-  document.getElementById('f-indication-id').value = m?.indication_id || '';
-  document.getElementById('f-drug').value = m?.drug_name || '';
-  document.getElementById('f-concentration-label').value = m?.concentration_label || '';
-  document.getElementById('f-dose-min').value = m?.dose_min_mg_per_kg_day || '';
-  document.getElementById('f-dose-max').value = m?.dose_max_mg_per_kg_day || '';
-  document.getElementById('f-concentration').value = m?.concentration_mg_per_ml || '';
-  document.getElementById('f-doses-per-day').value = m?.doses_per_day || '';
-  document.getElementById('f-duration-days').value = m?.duration_days || '';
-  document.getElementById('f-max-daily').value = m?.max_daily_dose_mg || '';
-  document.getElementById('f-adult-max-daily').value = m?.adult_max_daily_dose_mg || '';
-  document.getElementById('f-adult-note').value = m?.adult_dose_note || '';
-  document.getElementById('f-notes').value = m?.notes || '';
-  document.getElementById('new-indication-form').classList.add('hidden');
-  document.getElementById('preview-area').innerHTML = '';
-  document.getElementById('preview-weight').value = '';
-  document.getElementById('modal-overlay').classList.remove('hidden');
+window.closeDrugModal = function() {
+  document.getElementById('drug-modal-overlay').classList.add('hidden');
 };
 
-window.closeModal = function() {
-  document.getElementById('modal-overlay').classList.add('hidden');
-};
-
-// ── Save medication ──
-window.saveMed = async function(e) {
+window.saveDrug = async function(e) {
   e.preventDefault();
-
   const payload = {
-    indication_id: document.getElementById('f-indication-id').value || null,
-    drug_name: document.getElementById('f-drug').value.trim(),
-    concentration_label: document.getElementById('f-concentration-label').value.trim() || null,
-    dose_min_mg_per_kg_day: parseFloat(document.getElementById('f-dose-min').value),
-    dose_max_mg_per_kg_day: document.getElementById('f-dose-max').value ? parseFloat(document.getElementById('f-dose-max').value) : null,
-    concentration_mg_per_ml: parseFloat(document.getElementById('f-concentration').value),
-    doses_per_day: parseInt(document.getElementById('f-doses-per-day').value),
-    duration_days: document.getElementById('f-duration-days').value ? parseInt(document.getElementById('f-duration-days').value) : null,
-    max_daily_dose_mg: parseFloat(document.getElementById('f-max-daily').value),
-    adult_max_daily_dose_mg: document.getElementById('f-adult-max-daily').value ? parseFloat(document.getElementById('f-adult-max-daily').value) : null,
-    adult_dose_note: document.getElementById('f-adult-note').value.trim() || null,
-    notes: document.getElementById('f-notes').value.trim() || null,
-    updated_at: new Date().toISOString(),
+    name_he: document.getElementById('df-name-he').value.trim(),
+    name_en: textOrNull('df-name-en'),
+    search_aliases: textOrNull('df-aliases'),
+    max_daily_dose_mg: numOrNull('df-max-daily'),
   };
-
-  // ── Validation ──
-  if (!payload.indication_id) { showToast('יש לבחור אינדיקציה'); return; }
-  if (!payload.drug_name) { showToast('יש להזין שם תרופה'); return; }
-  if (!(payload.dose_min_mg_per_kg_day > 0)) { showToast('מינון מינימום חייב להיות גדול מאפס'); return; }
-  if (payload.dose_max_mg_per_kg_day != null && payload.dose_max_mg_per_kg_day < payload.dose_min_mg_per_kg_day) {
-    showToast('שגיאה: מינון מקסימום קטן ממינון מינימום'); return;
+  if (!payload.name_he) { showToast('יש להזין שם תרופה'); return; }
+  if (payload.max_daily_dose_mg != null && !(payload.max_daily_dose_mg > 0)) {
+    showToast('מקסימום יומי חייב להיות גדול מאפס (או ריק)'); return;
   }
-  if (!(payload.concentration_mg_per_ml > 0)) { showToast('ריכוז חייב להיות גדול מאפס'); return; }
-  if (!(payload.doses_per_day >= 1)) { showToast('מספר מנות ביום חייב להיות לפחות 1'); return; }
+  const id = document.getElementById('df-id').value;
+  const error = await saveRow('drugs', id, payload, document.getElementById('drug-save-btn'));
+  if (error) return;
+  closeDrugModal();
+  await loadDrugs();
+  renderProductsTable();
+  renderRecsTable();
+};
+
+async function deleteDrug(id) {
+  const d = drugsData.find(x => x.id === id);
+  const nProducts = productsData.filter(p => p.drug_id === id).length;
+  const nRecs = recsData.filter(r => r.drug_id === id).length;
+  if (nProducts || nRecs) {
+    alert(`לא ניתן למחוק את "${d?.name_he}" — יש לה ${nProducts} תכשיר/ים ו-${nRecs} המלצה/ות.\nיש למחוק אותם קודם.`);
+    return;
+  }
+  if (!confirm(`למחוק את התרופה "${d?.name_he}"?`)) return;
+  const { error } = await supabase.from('drugs').delete().eq('id', id);
+  if (error) { showToast(isFkError(error) ? 'לא ניתן למחוק — התרופה עדיין בשימוש' : 'שגיאה במחיקה: ' + error.message); return; }
+  showToast('נמחק ✓');
+  await loadDrugs();
+}
+
+// ── Products ──
+async function loadProducts() {
+  const { data, error } = await supabase.from('products').select('*').order('brand_name');
+  if (error) { showToast('שגיאה בטעינת תכשירים'); return; }
+  productsData = data || [];
+  renderProductsTable();
+}
+
+function renderProductsTable() {
+  const tbody = document.getElementById('products-tbody');
+  if (!productsData.length) { tbody.innerHTML = emptyRow(5, 'אין תכשירים עדיין'); return; }
+  const rows = [...productsData].sort((a, b) => drugName(a.drug_id).localeCompare(drugName(b.drug_id), 'he'));
+  tbody.innerHTML = rows.map(p => `
+    <tr>
+      <td>${esc(drugName(p.drug_id))}</td>
+      <td><strong>${esc(p.brand_name)}</strong></td>
+      <td>${concLabel(p)}<div style="font-size:.75rem;color:var(--gray-500);">= ${round2(p.conc_mg / p.conc_ml)} מ"ג/מ"ל</div></td>
+      <td style="font-size:.8rem;">${p.parent_note ? esc(p.parent_note) : '—'}</td>
+      <td>${rowActions('product', p.id)}</td>
+    </tr>
+  `).join('');
+  bindRowActions(tbody, 'product', openProductModal, deleteProduct);
+}
+
+function updateProductConcResult() {
+  const mg = numOrNull('pf-conc-mg');
+  const ml = numOrNull('pf-conc-ml');
+  document.getElementById('pf-conc-result').textContent =
+    mg > 0 && ml > 0 ? `= ${round2(mg / ml)} מ"ג למ"ל` : '';
+}
+document.getElementById('pf-conc-mg').addEventListener('input', updateProductConcResult);
+document.getElementById('pf-conc-ml').addEventListener('input', updateProductConcResult);
+
+window.openProductModal = function(id) {
+  if (!drugsData.length) { showToast('יש להוסיף קודם תרופה בלשונית "תרופות"'); return; }
+  const p = id ? productsData.find(x => x.id === id) : null;
+  document.getElementById('product-modal-title').textContent = p ? 'עריכת תכשיר' : 'הוסף תכשיר';
+  document.getElementById('pf-drug-id').innerHTML = drugOptions('— בחר תרופה —');
+  document.getElementById('pf-id').value = p?.id || '';
+  document.getElementById('pf-drug-id').value = p?.drug_id || '';
+  document.getElementById('pf-brand').value = p?.brand_name || '';
+  document.getElementById('pf-conc-mg').value = p?.conc_mg ?? '';
+  document.getElementById('pf-conc-ml').value = p?.conc_ml ?? '';
+  document.getElementById('pf-parent-note').value = p?.parent_note || '';
+  updateProductConcResult();
+  document.getElementById('product-modal-overlay').classList.remove('hidden');
+};
+
+window.closeProductModal = function() {
+  document.getElementById('product-modal-overlay').classList.add('hidden');
+};
+
+window.saveProduct = async function(e) {
+  e.preventDefault();
+  const payload = {
+    drug_id: document.getElementById('pf-drug-id').value || null,
+    brand_name: document.getElementById('pf-brand').value.trim(),
+    conc_mg: numOrNull('pf-conc-mg'),
+    conc_ml: numOrNull('pf-conc-ml'),
+    parent_note: textOrNull('pf-parent-note'),
+  };
+  if (!payload.drug_id) { showToast('יש לבחור תרופה'); return; }
+  if (!payload.brand_name) { showToast('יש להזין שם מסחרי'); return; }
+  if (!(payload.conc_mg > 0) || !(payload.conc_ml > 0)) { showToast('יש להזין ריכוז תקין (מ"ג ומ"ל)'); return; }
+  const id = document.getElementById('pf-id').value;
+  const error = await saveRow('products', id, payload, document.getElementById('product-save-btn'));
+  if (error) return;
+  closeProductModal();
+  await loadProducts();
+  renderDrugsTable();
+};
+
+async function deleteProduct(id) {
+  const p = productsData.find(x => x.id === id);
+  if (!confirm(`למחוק את התכשיר "${p?.brand_name}"?`)) return;
+  const { error } = await supabase.from('products').delete().eq('id', id);
+  if (error) { showToast('שגיאה במחיקה: ' + error.message); return; }
+  showToast('נמחק ✓');
+  await loadProducts();
+  renderDrugsTable();
+}
+
+// ── Recommendations ──
+async function loadRecs() {
+  const { data, error } = await supabase.from('recommendations').select('*');
+  if (error) { showToast('שגיאה בטעינת המלצות'); return; }
+  recsData = data || [];
+  renderRecsTable();
+  renderDrugsTable();
+}
+
+const LINE_ORDER = { first: 0, alternative: 1, allergy: 2 };
+
+window.renderRecsTable = function() {
+  const tbody = document.getElementById('recs-tbody');
+  const q = document.getElementById('rec-filter').value.trim().toLowerCase();
+  const st = document.getElementById('rec-status-filter').value;
+  const rows = recsData
+    .filter(r => !st || r.status === st)
+    .filter(r => {
+      if (!q) return true;
+      const d = drugsData.find(x => x.id === r.drug_id);
+      const hay = [indicationsData.find(x => x.id === r.indication_id)?.name_he,
+        d?.name_he, d?.name_en, d?.search_aliases].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    })
+    .sort((a, b) =>
+      (indicationsData.find(x => x.id === a.indication_id)?.name_he || '').localeCompare(
+        indicationsData.find(x => x.id === b.indication_id)?.name_he || '', 'he') ||
+      LINE_ORDER[a.treatment_line] - LINE_ORDER[b.treatment_line] ||
+      a.sort_order - b.sort_order);
+  if (!rows.length) {
+    tbody.innerHTML = emptyRow(8, recsData.length ? 'אין תוצאות לסינון' : 'אין המלצות עדיין');
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${indicationName(r.indication_id)}</td>
+      <td>${LINE_LABELS[r.treatment_line] || '—'}</td>
+      <td><strong>${esc(drugName(r.drug_id))}</strong></td>
+      <td><bdi dir="ltr">${r.dose_min_mg_per_kg_day}${r.dose_max_mg_per_kg_day != null ? '–' + r.dose_max_mg_per_kg_day : ''}</bdi></td>
+      <td>${r.doses_per_day}</td>
+      <td>${r.duration_days ? `${r.duration_days} ימים` : '—'}</td>
+      <td>${r.status === 'verified'
+        ? '<span class="badge" style="background:var(--success-light);color:var(--success);">✅ מאומת</span>'
+        : '<span class="badge" style="background:var(--warning-light);color:var(--warning);">📝 טיוטה</span>'}</td>
+      <td>${rowActions('rec', r.id)}</td>
+    </tr>
+  `).join('');
+  bindRowActions(tbody, 'rec', openRecModal, deleteRec);
+};
+
+window.showRecDrugInfo = function() {
+  const d = drugsData.find(x => x.id === document.getElementById('rf-drug-id').value);
+  const info = document.getElementById('rf-drug-info');
+  if (!d) { info.textContent = ''; return; }
+  const prods = productsData.filter(p => p.drug_id === d.id);
+  info.textContent =
+    `מקסימום יומי: ${d.max_daily_dose_mg != null ? d.max_daily_dose_mg + ' מ"ג' : 'לא הוגדר'} · ` +
+    (prods.length ? `תכשירים: ${prods.map(p => `${p.brand_name} (${concLabel(p)})`).join(', ')}` : '⚠️ אין עדיין תכשירים לתרופה זו');
+};
+
+window.openRecModal = function(id) {
+  if (!indicationsData.length || !drugsData.length) {
+    showToast('יש להוסיף קודם אבחנה ותרופה'); return;
+  }
+  const r = id ? recsData.find(x => x.id === id) : null;
+  populateIndicationSelect();
+  document.getElementById('rf-drug-id').innerHTML = drugOptions('— בחר תרופה —');
+  document.getElementById('rec-modal-title').textContent = r ? 'עריכת המלצה' : 'הוסף המלצה';
+  document.getElementById('rf-id').value = r?.id || '';
+  document.getElementById('rf-indication-id').value = r?.indication_id || '';
+  document.getElementById('rf-drug-id').value = r?.drug_id || '';
+  document.getElementById('rf-line').value = r?.treatment_line || 'first';
+  document.getElementById('rf-dose-min').value = r?.dose_min_mg_per_kg_day ?? '';
+  document.getElementById('rf-dose-max').value = r?.dose_max_mg_per_kg_day ?? '';
+  document.getElementById('rf-doses').value = r?.doses_per_day ?? '';
+  document.getElementById('rf-duration').value = r?.duration_days ?? '';
+  document.getElementById('rf-doctor-note').value = r?.doctor_note || '';
+  document.getElementById('rf-parent-note').value = r?.parent_note || '';
+  document.getElementById('rf-source').value = r?.source || '';
+  document.getElementById('rf-status').value = r?.status || 'draft';
+  document.getElementById('rf-sort').value = r?.sort_order ?? 0;
+  document.getElementById('rec-preview-area').innerHTML = '';
+  document.getElementById('rec-preview-weight').value = '';
+  showRecDrugInfo();
+  document.getElementById('rec-modal-overlay').classList.remove('hidden');
+};
+
+window.closeRecModal = function() {
+  document.getElementById('rec-modal-overlay').classList.add('hidden');
+};
+
+window.saveRec = async function(e) {
+  e.preventDefault();
+  const payload = {
+    indication_id: document.getElementById('rf-indication-id').value || null,
+    drug_id: document.getElementById('rf-drug-id').value || null,
+    treatment_line: document.getElementById('rf-line').value,
+    dose_min_mg_per_kg_day: numOrNull('rf-dose-min'),
+    dose_max_mg_per_kg_day: numOrNull('rf-dose-max'),
+    doses_per_day: intOrNull('rf-doses'),
+    duration_days: intOrNull('rf-duration'),
+    doctor_note: textOrNull('rf-doctor-note'),
+    parent_note: textOrNull('rf-parent-note'),
+    source: textOrNull('rf-source'),
+    status: document.getElementById('rf-status').value,
+    sort_order: intOrNull('rf-sort') ?? 0,
+  };
+  if (!payload.indication_id) { showToast('יש לבחור אבחנה'); return; }
+  if (!payload.drug_id) { showToast('יש לבחור תרופה'); return; }
+  if (!(payload.dose_min_mg_per_kg_day > 0)) { showToast('מינון חייב להיות גדול מאפס'); return; }
+  if (payload.dose_max_mg_per_kg_day != null && payload.dose_max_mg_per_kg_day < payload.dose_min_mg_per_kg_day) {
+    showToast('שגיאה: "עד" קטן מהמינון'); return;
+  }
+  if (!(payload.doses_per_day >= 1 && payload.doses_per_day <= 6)) { showToast('מנות ביום: בין 1 ל-6'); return; }
   if (payload.duration_days != null && !(payload.duration_days > 0)) {
     showToast('משך טיפול חייב להיות גדול מאפס (או ריק)'); return;
   }
-  if (!(payload.max_daily_dose_mg > 0)) { showToast('יש להזין מינון מקסימלי יומי'); return; }
-  if (payload.adult_max_daily_dose_mg != null && !(payload.adult_max_daily_dose_mg > 0)) {
-    showToast('מינון מקסימלי למבוגר חייב להיות גדול מאפס (או ריק)'); return;
+  if (payload.status === 'verified' && !productsData.some(p => p.drug_id === payload.drug_id)) {
+    if (!confirm('לתרופה זו אין עדיין תכשיר (ריכוז). לסמן את ההמלצה כמאומתת בכל זאת?')) return;
   }
-  const highEnd = payload.dose_max_mg_per_kg_day ?? payload.dose_min_mg_per_kg_day;
-  if (highEnd * 3 > payload.max_daily_dose_mg) {
-    const proceed = confirm(
-      `שים לב: עבור ילד במשקל 3 ק"ג, המינון לפי משקל (${round2(highEnd * 3)} מ"ג) כבר חורג מהמקסימום היומי שהזנת (${payload.max_daily_dose_mg} מ"ג).\n` +
-      `כך כל המטופלים יקבלו "חריגה ממינון". האם זה מכוון? (אישור = שמור בכל זאת)`
-    );
-    if (!proceed) return;
-  }
-  if (payload.adult_max_daily_dose_mg != null && payload.adult_max_daily_dose_mg < payload.max_daily_dose_mg) {
-    const proceed = confirm(
-      `שים לב: המינון המקסימלי למבוגר (${payload.adult_max_daily_dose_mg} מ"ג) נמוך מהמקסימום לילד (${payload.max_daily_dose_mg} מ"ג). ייתכן שזו טעות הקלדה. להמשיך בכל זאת?`
-    );
-    if (!proceed) return;
-  }
-
-  const btn = document.getElementById('save-btn');
-  btn.disabled = true; btn.textContent = 'שומר...';
-
-  const id = document.getElementById('f-id').value;
-  let error;
-  if (id) {
-    ({ error } = await supabase.from('medications').update(payload).eq('id', id));
-  } else {
-    payload.created_at = new Date().toISOString();
-    ({ error } = await supabase.from('medications').insert(payload));
-  }
-
-  btn.disabled = false; btn.textContent = 'שמור';
-  if (error) { showToast('שגיאה בשמירה: ' + error.message); return; }
-  showToast(id ? 'עודכן בהצלחה ✓' : 'נוסף בהצלחה ✓');
-  closeModal();
-  loadMeds();
+  const id = document.getElementById('rf-id').value;
+  const error = await saveRow('recommendations', id, payload, document.getElementById('rec-save-btn'));
+  if (error) return;
+  closeRecModal();
+  await loadRecs();
 };
 
-// ── Delete medication ──
-window.deleteMed = async function(id) {
-  const m = medsData.find(x => x.id === id);
-  const indHe = indicationsData.find(x => x.id === m?.indication_id)?.name_he || '';
-  if (!confirm(`למחוק את ${m?.drug_name}${indHe ? ` (${indHe})` : ''}?`)) return;
-  const { error } = await supabase.from('medications').delete().eq('id', id);
-  if (error) { showToast('שגיאה במחיקה'); return; }
+async function deleteRec(id) {
+  const r = recsData.find(x => x.id === id);
+  const indHe = indicationsData.find(x => x.id === r?.indication_id)?.name_he || '';
+  if (!confirm(`למחוק את ההמלצה ${drugName(r?.drug_id)}${indHe ? ` (${indHe})` : ''}?`)) return;
+  const { error } = await supabase.from('recommendations').delete().eq('id', id);
+  if (error) { showToast('שגיאה במחיקה: ' + error.message); return; }
   showToast('נמחק ✓');
-  loadMeds();
-};
+  await loadRecs();
+}
 
-// ── Preview calc ──
-window.previewCalc = function() {
-  const weight = parseFloat(document.getElementById('preview-weight').value);
-  if (!weight || weight <= 0) { showToast('יש להזין משקל לתצוגה מקדימה'); return; }
-
-  const doseMin = parseFloat(document.getElementById('f-dose-min').value);
-  const doseMax = document.getElementById('f-dose-max').value ? parseFloat(document.getElementById('f-dose-max').value) : null;
-  const conc = parseFloat(document.getElementById('f-concentration').value);
-  const dpd = parseInt(document.getElementById('f-doses-per-day').value);
-  const durationDays = document.getElementById('f-duration-days').value ? parseInt(document.getElementById('f-duration-days').value) : null;
-  const maxDaily = parseFloat(document.getElementById('f-max-daily').value);
-  const adultMaxDaily = document.getElementById('f-adult-max-daily').value ? parseFloat(document.getElementById('f-adult-max-daily').value) : null;
-
-  if (!doseMin || !conc || !dpd || !maxDaily) { showToast('יש למלא את שדות המינון קודם'); return; }
-
-  const calc = calculateDose({
-    weight, doseMin, doseMax, concentration: conc, dosesPerDay: dpd,
-    maxDailyDoseMg: maxDaily, adultMaxDailyDoseMg: adultMaxDaily,
-  });
-
-  if (calc.exceeded) {
-    let html = `
-      <div style="background:var(--warning-light);border:1.5px solid #fde68a;border-radius:8px;padding:14px;margin:12px 0;font-size:.9rem;">
-        <strong>תצוגה מקדימה (${weight} ק"ג):</strong><br>
-        <span style="color:var(--warning);">⚠️ המינון לפי משקל (${calc.dailyMax} מ"ג) חורג מהמקסימום היומי (${maxDaily} מ"ג).</span><br>`;
-    if (calc.adultVolMl != null) {
-      html += `יוצג למשתמש: תן <strong style="color:var(--primary)">${calc.adultVolMl} מ"ל</strong> (מינון מבוגרים) — ${dpd} פעמים ביום.`;
-    } else {
-      html += `עבור משקל זה תוצג הודעה כללית בלבד (לא הוזן מינון מקסימלי למבוגר).`;
-    }
-    html += `</div>`;
-    document.getElementById('preview-area').innerHTML = html;
+// Preview: same calculateDose() as the calculator, once per product of the chosen drug
+window.previewRec = function() {
+  const weight = numOrNull('rec-preview-weight');
+  if (!(weight > 0)) { showToast('יש להזין משקל לתצוגה מקדימה'); return; }
+  const drugId = document.getElementById('rf-drug-id').value;
+  const doseMin = numOrNull('rf-dose-min');
+  const doseMax = numOrNull('rf-dose-max');
+  const dpd = intOrNull('rf-doses');
+  if (!drugId || !(doseMin > 0) || !(dpd >= 1)) { showToast('יש לבחור תרופה ולמלא מינון ומנות ביום'); return; }
+  const drug = drugsData.find(x => x.id === drugId);
+  const prods = productsData.filter(p => p.drug_id === drugId);
+  const area = document.getElementById('rec-preview-area');
+  if (!prods.length) {
+    area.innerHTML = `<div style="background:var(--warning-light);border-radius:8px;padding:14px;margin:12px 0;font-size:.9rem;">⚠️ אין תכשירים לתרופה זו — אי אפשר לחשב נפח.</div>`;
     return;
   }
-
-  const volStr = calc.hasRange && calc.volMin !== calc.volMax ? `${calc.volMin}–${calc.volMax} מ"ל` : `${calc.volMin} מ"ל`;
-  const perDoseStr = calc.hasRange && calc.perDoseMin !== calc.perDoseMax ? `${calc.perDoseMin}–${calc.perDoseMax} מ"ג` : `${calc.perDoseMin} מ"ג`;
-  const dailyStr = calc.hasRange && calc.dailyMin !== calc.dailyMax ? `${calc.dailyMin}–${calc.dailyMax}` : `${calc.dailyMin}`;
-
-  document.getElementById('preview-area').innerHTML = `
-    <div style="background:var(--success-light);border:1.5px solid #bbf7d0;border-radius:8px;padding:14px;margin:12px 0;font-size:.9rem;">
-      <strong>תצוגה מקדימה (${weight} ק"ג):</strong><br>
-      מינון יומי: ${dailyStr} מ"ג<br>
-      לנטילה: ${perDoseStr} → <strong style="color:var(--primary)">${volStr}</strong> — ${dpd} פעמים ביום${durationDays ? ` · ${durationDays} ימים` : ''}
-    </div>
-  `;
+  const lines = prods.map(p => {
+    const calc = calculateDose({
+      weight, doseMin, doseMax, concentration: p.conc_mg / p.conc_ml, dosesPerDay: dpd,
+      maxDailyDoseMg: drug?.max_daily_dose_mg ?? null, adultMaxDailyDoseMg: null,
+    });
+    if (calc.exceeded) {
+      return `<li><strong>${esc(p.brand_name)}</strong>: <span style="color:var(--warning);">⚠️ חריגה מהמקסימום היומי (${calc.dailyMax} מ"ג &gt; ${drug.max_daily_dose_mg} מ"ג)</span></li>`;
+    }
+    const vol = calc.hasRange && calc.volMin !== calc.volMax ? `${calc.volMin}–${calc.volMax}` : `${calc.volMin}`;
+    const mg = calc.hasRange && calc.perDoseMin !== calc.perDoseMax ? `${calc.perDoseMin}–${calc.perDoseMax}` : `${calc.perDoseMin}`;
+    return `<li><strong>${esc(p.brand_name)}</strong>: <strong style="color:var(--primary)"><bdi dir="ltr">${vol}</bdi> מ"ל</strong> (<bdi dir="ltr">${mg}</bdi> מ"ג) · ${dpd} פעמים ביום</li>`;
+  });
+  area.innerHTML = `
+    <div style="background:var(--success-light);border-radius:8px;padding:14px;margin:12px 0;font-size:.9rem;">
+      <strong>תצוגה מקדימה (${weight} ק"ג):</strong>
+      <ul style="margin:6px 18px 0 0;padding:0;">${lines.join('')}</ul>
+    </div>`;
 };
 
 function showToast(msg) {
