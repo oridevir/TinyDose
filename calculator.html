@@ -876,7 +876,8 @@ function renderResultArea({
     const shareText =
       (patientStr ? `👤 ${patientStr}\n` : '') +
       `💊 ${drugName}\n` +
-      (indicationHe ? `${indicationHe}\n` : '') +
+      (indicationHe ? `${freeMode ? 'אבחנה: ' : ''}${indicationHe}\n` : '') +
+      `משקל: ${weight} ק"ג\n` +
       `────────────\n` +
       `מינון: ${perDoseStr} למנה\n` +
       `נפח: ${volStr} למנה\n` +
