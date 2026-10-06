@@ -943,7 +943,7 @@ function renderResultArea({
       .step-value { font-size: 13px; }
       .warn { font-size: 12px; color: #b0124d; margin: 0 0 14px; }
       .footer { font-size: 11px; color: #6b7bb3; line-height: 1.6; margin-top: 8px; }
-      .wish { font-size: 18px; font-weight: 800; color: #ff5d93; margin: 6px 0 2px; }
+      .wish { font-size: 26px; font-weight: 800; color: #ff5d93; text-align: center; margin: 10px 0 12px; }
     `;
     doc.head.appendChild(style);
 
@@ -1001,9 +1001,10 @@ function renderResultArea({
 
     if (freeMode) sheet.appendChild(el('p', 'warn', 'באחריות הקלינאי לוודא את נכונות המינון ואת אי-חריגה מהמינון המקסימלי המותר.'));
 
+    sheet.appendChild(el('p', 'wish', 'בריאות שלמה!'));
+
     const footer = el('div', 'footer');
     footer.appendChild(el('div', null, 'כלי עזר לרופאים בלבד — אינו מחליף שיקול דעת קליני'));
-    footer.appendChild(el('div', 'wish', 'בריאות שלמה!'));
     footer.appendChild(el('div', null, 'פותח ע"י ד"ר אורי דביר · TinyDose@DrDevir.com'));
     sheet.appendChild(footer);
 
