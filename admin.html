@@ -2,433 +2,172 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TinyDose — ניהול</title>
-  <link rel="stylesheet" href="style.css?v=20261006a">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>TinyDose — ניהול המאגר</title>
   <script src="config.js?v=20261006a"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Varela+Round&display=swap">
+  <!-- The admin screen is self-contained: its styles live here, not in style.css -->
+  <style>
+    :root {
+      --sky: #e6f3ff; --surface: #ffffff; --ink: #1f3550; --muted: #5d7590; --line: #d3e4f5;
+      --accent: #2b8fe8; --accent-ink: #ffffff;
+      --first: #dff5e6; --first-ink: #1d6b3a;
+      --alt: #fff1cc; --alt-ink: #7a5a00;
+      --allergy: #ece3ff; --allergy-ink: #5a3fa0;
+      --draft: #fff4dd; --draft-ink: #9a6400;
+      --ok: #e2f7e9; --ok-ink: #1d7a43;
+      --warn: #fff1cc; --warn-ink: #7a5a00;
+      --bad: #ffe1e3; --bad-ink: #b0222e;
+      --f-display: "Fredoka", "Varela Round", system-ui, sans-serif;
+      --f-body: "Varela Round", system-ui, "Segoe UI", Arial, sans-serif;
+      --r: 18px;
+      color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { background: var(--sky); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5; }
+    button, input, textarea, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    [hidden] { display: none !important; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    bdi { font-variant-numeric: tabular-nums; }
+
+    .app { max-width: 760px; margin: 0 auto; min-height: 100vh; padding-inline: 16px; padding-block: 0 120px; }
+    .app.wide { max-width: 1120px; }
+    .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--sky); display: flex; align-items: center; gap: 10px; padding-block: 12px; }
+    .top h1 { font-family: var(--f-display); font-weight: 600; font-size: 1.35rem; margin: 0; flex: 1; min-width: 0; text-wrap: balance; }
+    .top .sub { display: block; font-family: var(--f-body); font-weight: 400; font-size: .8rem; color: var(--muted); }
+    .iconbtn { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface); display: grid; place-items: center; font-size: 1.05rem; flex: none; }
+    .linkbtn { border: 0; background: transparent; color: var(--muted); font-size: .85rem; padding: 6px; }
+
+    .search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 999px; padding: 4px 16px; }
+    .search input { border: 0; background: transparent; flex: 1; padding: 10px 0; min-width: 0; }
+    .search input:focus { outline: none; }
+    .search:focus-within { border-color: var(--accent); }
+
+    .stack { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+    .attn { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .attn-card { display: flex; align-items: center; gap: 12px; border: 0; border-radius: var(--r); padding: 14px 16px; text-align: right; width: 100%; }
+    .attn-card b { font-family: var(--f-display); font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+    .attn-card span { flex: 1; }
+    .attn-draft { background: var(--draft); color: var(--draft-ink); }
+    .attn-issue { background: var(--bad); color: var(--bad-ink); }
+
+    .group { background: var(--surface); border-radius: var(--r); border: 1.5px solid var(--line); overflow: hidden; }
+    details.group > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; font-family: var(--f-display); font-weight: 500; font-size: 1.08rem; }
+    details.group > summary::-webkit-details-marker { display: none; }
+    details.group > summary .count { margin-inline-start: auto; font-family: var(--f-body); font-size: .82rem; color: var(--muted); }
+    details.group > summary::after { content: "‹"; color: var(--muted); transition: transform .2s; }
+    details.group[open] > summary::after { transform: rotate(-90deg); }
+    .row { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; border-top: 1px solid var(--line); background: transparent; padding: 13px 16px; text-align: right; }
+    .group > .row:first-child { border-top: 0; }
+    button.row:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+    .row .name { flex: 1; min-width: 0; }
+    .row .meta { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+    .row.add { color: var(--accent); }
+    .row.muted { color: var(--muted); font-size: .85rem; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--draft-ink); flex: none; }
+    .small { font-size: .8rem; color: var(--muted); }
+
+    .chip { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+    .l-first { background: var(--first); color: var(--first-ink); }
+    .l-alternative { background: var(--alt); color: var(--alt-ink); }
+    .l-allergy { background: var(--allergy); color: var(--allergy-ink); }
+    .s-draft { background: var(--draft); color: var(--draft-ink); }
+    .s-verified { background: var(--ok); color: var(--ok-ink); }
+
+    .section-label { font-size: .82rem; letter-spacing: .02em; color: var(--muted); margin: 6px 4px -4px; }
+    .opt { background: var(--surface); border-radius: var(--r); border: 1.5px solid var(--line); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .opt-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .opt-head h3 { margin: 0; font-family: var(--f-display); font-weight: 500; font-size: 1.15rem; flex: 1; min-width: 0; }
+    .opt-syrups, .opt-note { font-size: .84rem; color: var(--muted); }
+    .opt-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+    .opt-foot .small { margin-inline-start: auto; }
+
+    .btn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 16px; font-size: .9rem; }
+    .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .btn.ok { background: var(--ok); color: var(--ok-ink); border-color: transparent; }
+    .btn.danger { color: var(--bad-ink); border-color: color-mix(in srgb, var(--bad-ink) 35%, transparent); }
+    .btn.ghost { border-color: transparent; background: transparent; color: var(--accent); }
+    .btn.big { padding: 13px 20px; font-size: 1rem; width: 100%; }
+    .btn:disabled { opacity: .6; cursor: default; }
+
+    .bottom { position: fixed; inset-inline: 0; bottom: 0; z-index: 6; background: color-mix(in srgb, var(--sky) 90%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+    .bottom .inner { max-width: 728px; margin: 0 auto; display: flex; gap: 10px; }
+    .bottom .inner > * { flex: 1; }
+
+    .card { background: var(--surface); border-radius: var(--r); border: 1.5px solid var(--line); padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .card h2 { margin: 0; font-family: var(--f-display); font-weight: 500; font-size: 1.15rem; }
+    .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .field label { font-size: .88rem; color: var(--muted); }
+    .field input, .field textarea, .field select { width: 100%; border: 1.5px solid var(--line); border-radius: 14px; padding: 11px 14px; background: var(--sky); }
+    .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--accent); }
+    .pair { display: flex; gap: 10px; align-items: flex-end; }
+    .pair > .field { flex: 1; }
+    .pair > .sep { padding-bottom: 12px; }
+    .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+    .seg button { border: 1.5px solid var(--line); background: var(--sky); border-radius: 999px; padding: 9px 14px; font-size: .9rem; }
+    .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .pick { display: flex; align-items: center; gap: 10px; width: 100%; border: 1.5px solid var(--line); background: var(--sky); border-radius: 14px; padding: 11px 14px; text-align: right; }
+    .pick[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+    .pick .name { flex: 1; min-width: 0; }
+    .check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--line); display: grid; place-items: center; font-size: .8rem; flex: none; color: transparent; }
+    .pick[aria-pressed="true"] .check { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .picks { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+
+    .note-box { border-radius: 14px; padding: 12px 14px; font-size: .9rem; display: flex; flex-direction: column; gap: 8px; }
+    .note-warn { background: var(--warn); color: var(--warn-ink); }
+    .note-info { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+    .note-box .btn { align-self: flex-start; }
+
+    .pv { display: flex; flex-direction: column; gap: 10px; }
+    .pv-w { border: 1.5px solid var(--line); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .pv-w > strong { font-family: var(--f-display); font-weight: 500; }
+    .pv-line { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: .9rem; }
+    .pv-line .vol { font-weight: 700; }
+    .flag { font-size: .78rem; padding: 2px 8px; border-radius: 999px; }
+    .flag-bad { background: var(--bad); color: var(--bad-ink); }
+    .flag-warn { background: var(--warn); color: var(--warn-ink); }
+    .flag-ok { background: var(--ok); color: var(--ok-ink); }
+
+    .steps { display: flex; gap: 6px; margin-block: 4px 12px; }
+    .steps i { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+    .steps i.on { background: var(--accent); }
+    .ed-grid { display: grid; gap: 16px; }
+    .ed-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .ed-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    .wide .ed-grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }
+    .wide .ed-side { position: sticky; top: 76px; }
+    .summary { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: .92rem; margin: 0; }
+    .summary dt { color: var(--muted); }
+    .summary dd { margin: 0; }
+
+    .checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .checklist li { display: flex; gap: 10px; align-items: flex-start; }
+
+    .sheet-back { position: fixed; inset: 0; background: rgba(10, 25, 40, .45); z-index: 20; display: grid; place-items: end center; }
+    .sheet { background: var(--surface); width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; border-radius: 22px 22px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+    @media (min-width: 700px) { .sheet-back { place-items: center; } .sheet { border-radius: 22px; } }
+    .sheet h2 { margin: 0; font-family: var(--f-display); font-weight: 500; font-size: 1.2rem; }
+    .sheet-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .sheet-actions > .btn { flex: 1; }
+    .toast { position: fixed; bottom: 100px; inset-inline: 0; margin: 0 auto; width: fit-content; max-width: calc(100% - 32px); background: var(--ink); color: var(--sky); padding: 10px 18px; border-radius: 999px; font-size: .9rem; z-index: 30; }
+    .empty { text-align: center; color: var(--muted); padding: 24px 8px; }
+
+    .login { max-width: 380px; margin: 12vh auto 0; }
+    .login h1 { font-family: var(--f-display); font-weight: 600; font-size: 1.8rem; margin: 0; text-align: center; }
+    .err { color: var(--bad-ink); font-size: .88rem; }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
 </head>
 <body>
-
-<div class="dev-banner">🚧 האתר בשלב פיתוח — אין להשתמש בו להחלטות רפואיות בשלב זה 🚧</div>
-
-<!-- Login screen -->
-<div id="login-screen">
-  <div class="login-wrap">
-    <div class="login-card">
-      <h1>💊 TinyDose</h1>
-      <p class="sub">כניסה לממשק ניהול</p>
-      <div class="field">
-        <label>אימייל</label>
-        <input type="email" id="login-email" placeholder="dr@example.com" dir="ltr">
-      </div>
-      <div class="field">
-        <label>סיסמה</label>
-        <input type="password" id="login-password" placeholder="••••••••" dir="ltr">
-      </div>
-      <div id="login-error" style="color:var(--danger);font-size:.85rem;margin-bottom:12px;display:none;"></div>
-      <button class="btn btn-primary btn-full" onclick="doLogin()" id="login-btn">כניסה</button>
-    </div>
+  <div class="app" id="app">
+    <div id="screen"><div class="empty">טוען...</div></div>
   </div>
-</div>
-
-<!-- Admin app -->
-<div id="admin-app" class="hidden">
-  <header class="app-header">
-    <a href="index.html" class="logo">
-      <div class="logo-icon">💊</div>
-      <div>
-        <div class="logo-text">TinyDose</div>
-        <div class="logo-sub">ניהול</div>
-      </div>
-    </a>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <span id="admin-email" style="font-size:.8rem;color:var(--gray-500);"></span>
-      <button class="btn btn-secondary btn-sm" onclick="doLogout()">יציאה</button>
-    </div>
-  </header>
-
-  <main class="admin-layout" style="padding:16px;max-width:960px;margin:0 auto;">
-
-    <!-- Admin tabs -->
-    <div class="mode-tabs" style="margin-bottom:16px;flex-wrap:wrap;">
-      <button class="mode-tab active" onclick="showAdminTab('recs')" id="admin-tab-recs">📋 המלצות</button>
-      <button class="mode-tab" onclick="showAdminTab('drugs')" id="admin-tab-drugs">💊 תרופות</button>
-      <button class="mode-tab" onclick="showAdminTab('products')" id="admin-tab-products">🧴 תכשירים</button>
-      <button class="mode-tab" onclick="showAdminTab('indications')" id="admin-tab-indications">🩺 אבחנות</button>
-      <button class="mode-tab" onclick="showAdminTab('cats')" id="admin-tab-cats">🏷️ קטגוריות</button>
-    </div>
-
-    <!-- ── Recommendations section ── -->
-    <div id="admin-section-recs">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;">
-        <h2 style="font-size:1.2rem;font-weight:700;">המלצות טיפול לפי אבחנה</h2>
-        <button class="btn btn-primary" onclick="openRecModal()">+ הוסף המלצה</button>
-      </div>
-      <div class="card" style="padding:12px 16px;margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
-        <input type="text" id="rec-filter" placeholder="סנן לפי אבחנה / תרופה..." oninput="renderRecsTable()" style="flex:1;min-width:180px;">
-        <select id="rec-status-filter" onchange="renderRecsTable()" style="width:auto;">
-          <option value="">כל הסטטוסים</option>
-          <option value="draft">טיוטה בלבד</option>
-          <option value="verified">מאומת בלבד</option>
-        </select>
-      </div>
-      <div class="card" style="padding:0;">
-        <div class="table-wrap">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>אבחנה</th>
-                <th>קו טיפול</th>
-                <th>תרופה</th>
-                <th>מינון (מ"ג/ק"ג/י)</th>
-                <th>מנות/י</th>
-                <th>משך</th>
-                <th>סטטוס</th>
-                <th>פעולות</th>
-              </tr>
-            </thead>
-            <tbody id="recs-tbody">
-              <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--gray-400);"><div class="spinner"></div></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Drugs section ── -->
-    <div id="admin-section-drugs" class="hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;">
-        <h2 style="font-size:1.2rem;font-weight:700;">תרופות (שם גנרי)</h2>
-        <button class="btn btn-primary" onclick="openDrugModal()">+ הוסף תרופה</button>
-      </div>
-      <div class="card" style="padding:0;">
-        <div class="table-wrap">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>שם (עברית)</th>
-                <th>שם (אנגלית)</th>
-                <th>מקסימום יומי</th>
-                <th>תכשירים</th>
-                <th>המלצות</th>
-                <th>פעולות</th>
-              </tr>
-            </thead>
-            <tbody id="drugs-tbody">
-              <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-400);"><div class="spinner"></div></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Products section ── -->
-    <div id="admin-section-products" class="hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px;">
-        <h2 style="font-size:1.2rem;font-weight:700;">תכשירים (שם מסחרי וריכוז)</h2>
-        <button class="btn btn-primary" onclick="openProductModal()">+ הוסף תכשיר</button>
-      </div>
-      <div class="card" style="padding:12px 16px;margin-bottom:12px;">
-        <input type="text" id="product-filter" placeholder="חפש לפי שם מסחרי / שם גנרי, בעברית או באנגלית..." oninput="renderProductsTable()">
-      </div>
-      <div class="card" style="padding:0;">
-        <div class="table-wrap">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>תרופה</th>
-                <th>שם מסחרי</th>
-                <th>ריכוז</th>
-                <th>הערה להורים</th>
-                <th>פעולות</th>
-              </tr>
-            </thead>
-            <tbody id="products-tbody">
-              <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--gray-400);"><div class="spinner"></div></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Indications section ── -->
-    <div id="admin-section-indications" class="hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h2 style="font-size:1.2rem;font-weight:700;">אבחנות</h2>
-        <button class="btn btn-primary" onclick="openIndicationModal()">+ הוסף אבחנה</button>
-      </div>
-
-      <div class="card" style="padding:0;">
-        <div class="table-wrap">
-          <table class="admin-table" id="indications-table">
-            <thead>
-              <tr>
-                <th>שם (עברית)</th>
-                <th>שם (אנגלית)</th>
-                <th>קטגוריה</th>
-                <th>פעולות</th>
-              </tr>
-            </thead>
-            <tbody id="indications-tbody">
-              <tr><td colspan="4" style="text-align:center;padding:30px;color:var(--gray-400);">
-                <div class="spinner"></div>
-              </td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Categories section ── -->
-    <div id="admin-section-cats" class="hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h2 style="font-size:1.2rem;font-weight:700;">קטגוריות</h2>
-        <button class="btn btn-primary" onclick="openCatModal()">+ הוסף קטגוריה</button>
-      </div>
-
-      <div class="card" style="padding:0;">
-        <div class="table-wrap">
-          <table class="admin-table" id="cats-table">
-            <thead>
-              <tr>
-                <th>שם (עברית)</th>
-                <th>שם (אנגלית)</th>
-                <th>סדר</th>
-                <th>פעולות</th>
-              </tr>
-            </thead>
-            <tbody id="cats-tbody">
-              <tr><td colspan="4" style="text-align:center;padding:30px;color:var(--gray-400);">
-                <div class="spinner"></div>
-              </td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-  </main>
-</div>
-
-<!-- Modal: Add/Edit Recommendation -->
-<div class="modal-overlay hidden" id="rec-modal-overlay" onclick="if(event.target===this)closeRecModal()">
-  <div class="modal">
-    <div class="modal-title" id="rec-modal-title">הוסף המלצה</div>
-    <form id="rec-form" onsubmit="saveRec(event)">
-      <input type="hidden" id="rf-id">
-      <div class="form-grid">
-        <div class="field full">
-          <label>אבחנה *</label>
-          <select id="rf-indication-id" required></select>
-        </div>
-        <div class="field full">
-          <label>תרופה *</label>
-          <select id="rf-drug-id" required onchange="showRecDrugInfo()"></select>
-          <p id="rf-drug-info" style="font-size:.75rem;color:var(--gray-500);margin-top:4px;"></p>
-        </div>
-        <div class="field full">
-          <label>קו טיפול *</label>
-          <select id="rf-line" required>
-            <option value="first">קו ראשון</option>
-            <option value="alternative">חלופה</option>
-            <option value="allergy">אלרגיה לפניצילין</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>מינון (מ"ג/ק"ג/יום) *</label>
-          <input type="number" id="rf-dose-min" required min="0" step="any" dir="ltr">
-        </div>
-        <div class="field">
-          <label>עד (מ"ג/ק"ג/יום)</label>
-          <input type="number" id="rf-dose-max" min="0" step="any" dir="ltr" placeholder="ריק = מינון קבוע">
-        </div>
-        <div class="field">
-          <label>מנות ביום *</label>
-          <input type="number" id="rf-doses" required min="1" max="6" step="1" dir="ltr">
-        </div>
-        <div class="field">
-          <label>משך טיפול (ימים)</label>
-          <input type="number" id="rf-duration" min="1" step="1" dir="ltr" placeholder="לא חובה">
-        </div>
-        <div class="field full">
-          <label>הערה לרופא</label>
-          <textarea id="rf-doctor-note" rows="2" placeholder="מוצגת רק בחלון המינון"></textarea>
-        </div>
-        <div class="field full">
-          <label>הערה להורים</label>
-          <textarea id="rf-parent-note" rows="2" placeholder="עוברת לשדה &quot;הערות להורים&quot; (תדפיס ווואטסאפ)"></textarea>
-        </div>
-        <div class="field full">
-          <label>מקור</label>
-          <input type="text" id="rf-source" placeholder="לדוגמה: הנחיות האיגוד לרפואת ילדים 2025">
-        </div>
-        <div class="field">
-          <label>סטטוס *</label>
-          <select id="rf-status">
-            <option value="draft">📝 טיוטה (לא מוצג באתר)</option>
-            <option value="verified">✅ מאומת (מוצג באתר)</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>סדר תצוגה</label>
-          <input type="number" id="rf-sort" min="0" step="1" dir="ltr" value="0">
-        </div>
-      </div>
-      <!-- Preview -->
-      <div id="rec-preview-area"></div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;margin-top:8px;flex-wrap:wrap;align-items:center;">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="previewRec()">👁️ תצוגה מקדימה</button>
-        <input type="number" id="rec-preview-weight" placeholder="משקל לדוגמה" min="1" max="120" step="0.5" style="width:130px;" dir="ltr">
-        <span style="font-size:.85rem;color:var(--gray-500);">ק"ג</span>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeRecModal()">ביטול</button>
-        <button type="submit" class="btn btn-primary" id="rec-save-btn">שמור</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal: Add/Edit Drug -->
-<div class="modal-overlay hidden" id="drug-modal-overlay" onclick="if(event.target===this)closeDrugModal()">
-  <div class="modal">
-    <div class="modal-title" id="drug-modal-title">הוסף תרופה</div>
-    <form id="drug-form" onsubmit="saveDrug(event)">
-      <input type="hidden" id="df-id">
-      <div class="form-grid">
-        <div class="field full">
-          <label>שם גנרי (עברית) *</label>
-          <input type="text" id="df-name-he" required placeholder="לדוגמה: אמוקסיצילין">
-        </div>
-        <div class="field full">
-          <label>שם גנרי (אנגלית)</label>
-          <input type="text" id="df-name-en" placeholder="e.g. Amoxicillin" dir="ltr">
-        </div>
-        <div class="field full">
-          <label>שמות נוספים לחיפוש</label>
-          <input type="text" id="df-aliases" placeholder="מופרדים בפסיק, לדוגמה: אמוקסצילין, amoxycillin">
-        </div>
-        <div class="field full">
-          <label>מקסימום יומי (מ"ג)</label>
-          <input type="number" id="df-max-daily" min="0" step="any" dir="ltr" placeholder="לא חובה">
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeDrugModal()">ביטול</button>
-        <button type="submit" class="btn btn-primary" id="drug-save-btn">שמור</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal: Add/Edit Product -->
-<div class="modal-overlay hidden" id="product-modal-overlay" onclick="if(event.target===this)closeProductModal()">
-  <div class="modal">
-    <div class="modal-title" id="product-modal-title">הוסף תכשיר</div>
-    <form id="product-form" onsubmit="saveProduct(event)">
-      <input type="hidden" id="pf-id">
-      <div class="form-grid">
-        <div class="field full">
-          <label>תרופה (חומר פעיל) *</label>
-          <select id="pf-drug-id" required></select>
-        </div>
-        <div class="field full">
-          <label>שם מסחרי (עברית) *</label>
-          <input type="text" id="pf-brand" required placeholder="לדוגמה: מוקסיפן 250">
-        </div>
-        <div class="field full">
-          <label>שם מסחרי (אנגלית)</label>
-          <input type="text" id="pf-brand-en" placeholder="e.g. Moxypen 250" dir="ltr">
-        </div>
-        <div class="field full">
-          <label>שמות נוספים לחיפוש</label>
-          <input type="text" id="pf-aliases" placeholder="מופרדים בפסיק, לדוגמה: מוקסיפן פורטה, moxipen">
-        </div>
-        <div class="field">
-          <label>ריכוז: מ"ג *</label>
-          <input type="number" id="pf-conc-mg" required min="0" step="any" dir="ltr" placeholder="250">
-        </div>
-        <div class="field">
-          <label>ב-מ"ל *</label>
-          <input type="number" id="pf-conc-ml" required min="0" step="any" dir="ltr" placeholder="5">
-        </div>
-        <div class="field full">
-          <p id="pf-conc-result" style="font-size:.8rem;color:var(--gray-500);"></p>
-        </div>
-        <div class="field full">
-          <label>הערה להורים</label>
-          <textarea id="pf-parent-note" rows="2" placeholder="לדוגמה: לשמור במקרר אחרי הכנה, לנער לפני שימוש"></textarea>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeProductModal()">ביטול</button>
-        <button type="submit" class="btn btn-primary" id="product-save-btn">שמור</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal: Add/Edit Indication -->
-<div class="modal-overlay hidden" id="indication-modal-overlay" onclick="if(event.target===this)closeIndicationModal()">
-  <div class="modal">
-    <div class="modal-title" id="indication-modal-title">הוסף אבחנה</div>
-    <form id="indication-form" onsubmit="saveIndication(event)">
-      <input type="hidden" id="if-id">
-      <div class="form-grid">
-        <div class="field full">
-          <label>שם אבחנה (עברית) *</label>
-          <input type="text" id="if-name-he" required placeholder="לדוגמה: אוטיטיס מדיה">
-        </div>
-        <div class="field full">
-          <label>שם אבחנה (אנגלית)</label>
-          <input type="text" id="if-name-en" placeholder="e.g. Otitis Media" dir="ltr">
-        </div>
-        <div class="field full">
-          <label>קטגוריה</label>
-          <select id="if-category-id">
-            <option value="">ללא קטגוריה (כללי)</option>
-          </select>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeIndicationModal()">ביטול</button>
-        <button type="submit" class="btn btn-primary" id="indication-save-btn">שמור</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal: Add/Edit Category -->
-<div class="modal-overlay hidden" id="cat-modal-overlay" onclick="if(event.target===this)closeCatModal()">
-  <div class="modal">
-    <div class="modal-title" id="cat-modal-title">הוסף קטגוריה</div>
-    <form id="cat-form" onsubmit="saveCat(event)">
-      <input type="hidden" id="cf-id">
-      <div class="form-grid">
-        <div class="field full">
-          <label>שם קטגוריה (עברית) *</label>
-          <input type="text" id="cf-name-he" required placeholder="לדוגמה: נשימתי">
-        </div>
-        <div class="field full">
-          <label>שם קטגוריה (אנגלית)</label>
-          <input type="text" id="cf-name-en" placeholder="e.g. Respiratory" dir="ltr">
-        </div>
-        <div class="field full">
-          <label>סדר תצוגה</label>
-          <input type="number" id="cf-sort-order" min="0" step="1" dir="ltr" value="0">
-          <p style="font-size:.75rem;color:var(--gray-400);margin-top:4px;">מספר נמוך יותר = מוצג קודם</p>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeCatModal()">ביטול</button>
-        <button type="submit" class="btn btn-primary" id="cat-save-btn">שמור</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script type="module" src="admin.js"></script>
+  <div class="bottom" id="bottom" hidden><div class="inner" id="bottom-inner"></div></div>
+  <div id="overlay"></div>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script type="module" src="admin.js"></script>
 </body>
 </html>
