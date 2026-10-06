@@ -873,18 +873,21 @@ function renderResultArea({
 
   document.getElementById('share-btn').addEventListener('click', () => {
     const doctorNotes = document.getElementById('doctor-notes').value.trim();
+    // WhatsApp renders *text* as bold. One emoji per line so each line is
+    // recognizable at a glance; the amount to give is the bold centerpiece.
+    const sep = '━━━━━━━━━━━━\n';
     const shareText =
       (patientStr ? `👤 ${patientStr}\n` : '') +
-      `💊 ${drugName}\n` +
-      (indicationHe ? `${freeMode ? 'אבחנה: ' : ''}${indicationHe}\n` : '') +
-      `משקל: ${weight} ק"ג\n` +
-      `────────────\n` +
-      `מינון: ${perDoseStr} למנה\n` +
-      `נפח: ${volStr} למנה\n` +
-      `תדירות: ${freqStr}\n` +
-      (durationStr ? `למשך ${durationStr}\n` : '') +
-      (doctorNotes ? `${doctorNotes}\n` : '') +
-      `────────────\n` +
+      `💊 *${drugName}*\n` +
+      (indicationHe ? `🩺 ${freeMode ? 'אבחנה: ' : ''}${indicationHe}\n` : '') +
+      `⚖️ משקל: ${weight} ק"ג\n` +
+      sep +
+      `🥄 *לתת ${volStr} בכל פעם*\n` +
+      `🕐 ${freqStr}\n` +
+      (durationStr ? `📅 למשך ${durationStr}\n` : '') +
+      `💉 ${perDoseStr} למנה\n` +
+      (doctorNotes ? `📝 ${doctorNotes}\n` : '') +
+      sep +
       `tinydose.drdevir.com`;
 
     if (navigator.share) {
