@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261004s">
-  <script src="config.js?v=20261004s"></script>
+  <link rel="stylesheet" href="style.css?v=20261006a">
+  <script src="config.js?v=20261006a"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 </head>
 <body>
@@ -523,6 +523,7 @@ function renderFreeForm() {
           <small>לתת בכל פעם</small>
           <div class="ff-big" id="ff-live-vol">—</div>
           <small id="ff-live-sub">מלא את השדות המסומנים ב-*</small>
+          <span class="ff-tag" id="ff-live-tag" hidden></span>
         </div>
         <svg class="ff-cup" viewBox="0 0 100 124" role="img" aria-label="כוס מדידה">
           <defs><clipPath id="ff-cup-clip"><path d="M14 12 L86 12 L76 112 L24 112 Z"/></clipPath></defs>
@@ -537,6 +538,23 @@ function renderFreeForm() {
           <text id="ff-cup-size" x="50" y="123" text-anchor="middle" fill="#dff0ff" font-size="9" font-family="Varela Round, Arial, sans-serif"></text>
         </svg>
       </div>
+
+      <!-- Optional rounding, collapsed by default. Nothing changes unless the
+           clinician opens it and picks a rounded amount. -->
+      <details class="ff-round" id="ff-round" hidden>
+        <summary>עיגול המנה <span class="ff-round-state" id="ff-round-state"></span></summary>
+        <div class="ff-round-body">
+          <div class="ff-round-step">עיגול ל־
+            <div class="ff-seg" role="group" aria-label="גודל העיגול">
+              <button type="button" data-step="0.25">¼ מ"ל</button>
+              <button type="button" data-step="0.5" aria-pressed="true">½ מ"ל</button>
+              <button type="button" data-step="1">1 מ"ל</button>
+            </div>
+          </div>
+          <div class="ff-round-opts" id="ff-round-opts"></div>
+          <p class="ff-round-msg" id="ff-round-msg" hidden></p>
+        </div>
+      </details>
     </div>
     <div id="result-area"></div>
   `;
@@ -612,6 +630,7 @@ function renderFreeForm() {
       subEl.textContent = 'מלא את השדות המסומנים ב-*';
       drawCup(null);
       showResultPlaceholder('פירוט החישוב יופיע כאן אחרי שימולאו כל השדות המסומנים ב-*');
+      hideRounding();
       return;
     }
     if (f.doseMax != null && f.doseMax < f.doseMin) {
@@ -619,6 +638,7 @@ function renderFreeForm() {
       subEl.textContent = 'מינון ה"עד" קטן מה"מ-"';
       drawCup(null);
       showResultPlaceholder('מינון ה"עד" קטן ממינון ה"מ-". יש לתקן את טווח המינון.');
+      hideRounding();
       return;
     }
     const calc = calculateDose({
@@ -632,27 +652,139 @@ function renderFreeForm() {
       volEl.textContent = '—'; volEl.classList.remove('is-range');
       subEl.textContent = 'חריגה מהמקסימום היומי';
       drawCup(null);
+      hideRounding();
       renderDetails(f);
       return;
     }
-    const range = (a, b) => (calc.hasRange && a !== b) ? `${rng(a, b)}` : `${a}`;
-    volEl.textContent = `${range(calc.volMin, calc.volMax)} מ"ל`;
-    volEl.classList.toggle('is-range', calc.hasRange && calc.volMin !== calc.volMax);
+    const rounding = updateRounding(f, calc);
+    const vMin = rounding ? rounding.volMin : calc.volMin;
+    const vMax = rounding ? rounding.volMax : calc.volMax;
+    const conc = f.concMg / f.concMl;
+    const pMin = rounding ? round2(vMin * conc) : calc.perDoseMin;
+    const pMax = rounding ? round2(vMax * conc) : calc.perDoseMax;
+    const range = (a, b) => (a !== b) ? `${rng(a, b)}` : `${a}`;
+    volEl.textContent = `${range(vMin, vMax)} מ"ל`;
+    volEl.classList.toggle('is-range', vMin !== vMax);
     if (volEl.dataset.last !== volEl.textContent) {
       volEl.dataset.last = volEl.textContent;
       volEl.classList.remove('pop'); void volEl.offsetWidth; volEl.classList.add('pop');
     }
-    subEl.textContent = `${freqStr} · ${range(calc.perDoseMin, calc.perDoseMax)} מ"ג למנה`;
-    drawCup(calc.volMax);
-    renderDetails(f);
+    subEl.textContent = `${freqStr} · ${range(pMin, pMax)} מ"ג למנה`;
+    $('ff-live-tag').hidden = !rounding;
+    $('ff-live-tag').textContent = rounding
+      ? `מעוגל ל־${STEP_LABEL[roundState.step]} · מדויק: ${range(calc.volMin, calc.volMax)} מ"ל` : '';
+    drawCup(vMax);
+    renderDetails(f, rounding);
   }
+
+  // ── Rounding (optional, clinician's choice) ──
+  // Rounds the volume to ¼ / ½ / 1 ml (default ½).
+  // Fixed dose: offers the nearest lower and higher amounts. Dose range: offers
+  // the range rounded inward, so it never leaves the entered range.
+  // Never above the entered max daily dose. Any field change resets to exact.
+  const STEP_LABEL = { 0.25: '¼ מ"ל', 0.5: '½ מ"ל', 1: '1 מ"ל' };
+  const roundState = { step: 0.5, choice: 'exact' };
+
+  function hideRounding() {
+    roundState.choice = 'exact';
+    $('ff-round').hidden = true;
+    $('ff-live-tag').hidden = true;
+  }
+
+  function updateRounding(f, calc) {
+    const box = $('ff-round'), opts = $('ff-round-opts'), msg = $('ff-round-msg');
+    box.hidden = false;
+    const step = roundState.step;
+    const conc = f.concMg / f.concMl;
+    const mgkg = ml => round2(ml * conc * f.dosesPerDay / f.weight);
+    const overMax = ml => f.maxDailyDoseMg != null && ml * conc * f.dosesPerDay > f.maxDailyDoseMg + 1e-9;
+    const fmt = n => String(round2(n));
+    const eps = 1e-9;
+    const choices = {};   // key -> { volMin, volMax, disabled, why }
+    let html = '';
+
+    // Down = both ends rounded down, up = both ends rounded up (a fixed dose
+    // is a range with equal ends). Leaving the entered dose range is allowed
+    // but flagged; going over the max daily dose is blocked.
+    const isRange = calc.hasRange && calc.volMin !== calc.volMax;
+    const roundDown = v => { const r = Math.floor(v / step + eps) * step; return Math.abs(r - v) < 1e-6 && !isRange ? r - step : r; };
+    const roundUp = v => { const r = Math.ceil(v / step - eps) * step; return Math.abs(r - v) < 1e-6 && !isRange ? r + step : r; };
+    const doseLo = f.doseMin, doseHi = f.doseMax != null ? f.doseMax : f.doseMin;
+    // "Outside the range" only means something when a dose range was entered;
+    // rounding a fixed dose always moves it a little and gets the plain note.
+    const hasDoseRange = doseHi !== doseLo;
+    const outside = (a, b) => hasDoseRange && (mgkg(a) < doseLo - 0.005 || mgkg(b) > doseHi + 0.005);
+    const dn = { volMin: roundDown(calc.volMin), volMax: roundDown(calc.volMax) };
+    const upc = { volMin: roundUp(calc.volMin), volMax: roundUp(calc.volMax) };
+    dn.disabled = dn.volMin <= 0;
+    upc.disabled = overMax(upc.volMax); upc.why = upc.disabled ? 'max' : null;
+    dn.outside = outside(dn.volMin, dn.volMax); upc.outside = outside(upc.volMin, upc.volMax);
+    choices.down = dn; choices.up = upc;
+
+    const txt = (a, b) => a === b ? fmt(a) : rng(fmt(a), fmt(b));
+    const mg = (a, b) => (mgkg(a) === mgkg(b) ? mgkg(a) : rng(mgkg(a), mgkg(b))) + ' מ"ג/ק"ג/יום';
+    const pct = c => { const p = Math.round((c.volMax - calc.volMax) / calc.volMax * 100); return '\u2066' + (p > 0 ? '+' : '') + p + '%\u2069'; };
+    const btn = (key, dir, c, sub, extra) => `
+      <button type="button" class="ff-opt${c.outside ? ' is-outside' : ''}" data-choice="${key}" aria-pressed="${roundState.choice === key}"${c.disabled ? ' disabled' : ''}>
+        <span class="dir">${dir}</span><span class="ml">${txt(c.volMin, c.volMax)} מ"ל</span>
+        <span class="mgk">${sub}</span><span class="pct">${extra}</span>
+      </button>`;
+    html = btn('down', '⬇ למטה', dn, mg(dn.volMin, dn.volMax), dn.outside ? '⚠️ מחוץ לטווח' : pct(dn))
+         + btn('exact', '✓ מדויק', { volMin: calc.volMin, volMax: calc.volMax },
+               (doseLo === doseHi ? doseLo : rng(doseLo, doseHi)) + ' מ"ג/ק"ג/יום', '&nbsp;')
+         + btn('up', '⬆ למעלה', upc, mg(upc.volMin, upc.volMax), upc.outside ? '⚠️ מחוץ לטווח' : pct(upc));
+    opts.innerHTML = html;
+
+    if (roundState.choice !== 'exact' && (!choices[roundState.choice] || choices[roundState.choice].disabled)) {
+      roundState.choice = 'exact';
+      opts.querySelectorAll('.ff-opt').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.choice === 'exact')));
+    }
+
+    msg.hidden = true;
+    if (choices.up && choices.up.disabled && choices.up.why === 'max') {
+      msg.hidden = false; msg.className = 'ff-round-msg stop';
+      msg.textContent = `עיגול למעלה חסום: ${fmt(choices.up.volMin)} מ"ל × ${f.dosesPerDay} = ${fmt(choices.up.volMin * conc * f.dosesPerDay)} מ"ג ביום, מעל המקסימום שהוזן (${f.maxDailyDoseMg} מ"ג).`;
+    }
+
+    const chosen = roundState.choice === 'exact' ? null : choices[roundState.choice];
+    if (chosen) {
+      if (msg.hidden) {
+        msg.hidden = false; msg.className = 'ff-round-msg warn';
+        const a = mgkg(chosen.volMin), b = mgkg(chosen.volMax);
+        const mgTxt = a === b ? a : rng(a, b);
+        if (chosen.outside) {
+          msg.className = 'ff-round-msg stop';
+          msg.textContent = `⚠️ שים לב: אחרי העיגול המינון הוא ${mgTxt} מ"ג/ק"ג/יום, מחוץ לטווח שהוזן (${doseLo === doseHi ? doseLo : rng(doseLo, doseHi)}).`;
+        } else {
+          msg.textContent = `המינון אחרי העיגול: ${mgTxt} מ"ג/ק"ג/יום.`;
+        }
+      }
+      $('ff-round-state').textContent = `· נבחר: ${chosen.volMin === chosen.volMax ? fmt(chosen.volMin) : rng(fmt(chosen.volMin), fmt(chosen.volMax))} מ"ל`;
+      return { volMin: round2(chosen.volMin), volMax: round2(chosen.volMax), step, outside: !!chosen.outside };
+    }
+    $('ff-round-state').textContent = '';
+    return null;
+  }
+
+  $('ff-round-opts').addEventListener('click', e => {
+    const b = e.target.closest('.ff-opt');
+    if (!b || b.disabled) return;
+    roundState.choice = b.dataset.choice;
+    updateLive();
+  });
+  document.querySelectorAll('#ff-round .ff-seg button').forEach(b => b.addEventListener('click', () => {
+    roundState.step = parseFloat(b.dataset.step);
+    roundState.choice = 'exact';
+    document.querySelectorAll('#ff-round .ff-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    updateLive();
+  }));
 
   // The detailed steps + share/print/reset always sit under the bubble and
   // follow every keystroke. Doctor notes typed there survive the re-render.
-  function renderDetails(f) {
+  function renderDetails(f, rounding = null) {
     const notesEl = document.getElementById('doctor-notes');
     const notes = notesEl ? notesEl.value : '';
-    renderFreeResult({ ...f, conc: round2(f.concMg / f.concMl), scroll: false });
+    renderFreeResult({ ...f, conc: round2(f.concMg / f.concMl), scroll: false, rounding });
     const newNotes = document.getElementById('doctor-notes');
     if (newNotes) newNotes.value = notes;
   }
@@ -687,12 +819,15 @@ function renderFreeForm() {
     }
   });
 
-  document.querySelector('.ff').addEventListener('input', updateLive);
+  document.querySelector('.ff').addEventListener('input', () => {
+    roundState.choice = 'exact';   // a changed field must never keep an old rounding
+    updateLive();
+  });
 
   updateLive();
 }
 
-function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight, scroll = true }) {
+function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin, doseMax, conc, dosesPerDay, maxDailyDoseMg, weight, scroll = true, rounding = null }) {
   const calc = calculateDose({
     weight, doseMin, doseMax, concentration: conc, dosesPerDay, maxDailyDoseMg,
   });
@@ -727,6 +862,7 @@ function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin
     catalogNotes: null,
     freeMode: true,
     scroll,
+    rounding,
   });
 }
 
@@ -734,7 +870,8 @@ function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin
 function renderResultArea({
   drugName, indicationHe, indicationEn, weight, steps,
   calc, dosesPerDay, durationDays, freqStr, concentration, maxDailyDoseMg,
-  adultDoseNote, catalogNotes, freeMode, patientName, patientId, scroll = true
+  adultDoseNote, catalogNotes, freeMode, patientName, patientId, scroll = true,
+  rounding = null  // { volMin, volMax } chosen by the clinician in the free flow, else null
 }) {
   const resultArea = document.getElementById('result-area');
   const patientStr = [patientName, patientId ? `ת.ז. ${patientId}` : ''].filter(Boolean).join(' · ');
@@ -814,13 +951,12 @@ function renderResultArea({
   }
 
   // ── NORMAL CASE ──
-  const perDoseStr = calc.hasRange && calc.perDoseMin !== calc.perDoseMax
+  let perDoseStr = calc.hasRange && calc.perDoseMin !== calc.perDoseMax
     ? `${rng(calc.perDoseMin, calc.perDoseMax)} מ"ג`
     : `${calc.perDoseMin} מ"ג`;
-  const volStr = calc.hasRange && calc.volMin !== calc.volMax
+  let volStr = calc.hasRange && calc.volMin !== calc.volMax
     ? `${rng(calc.volMin, calc.volMax)} מ"ל`
     : `${calc.volMin} מ"ל`;
-  const volDisplay = `<span class="highlight">${volStr}</span>`;
 
   const dailyNumStr = calc.hasRange && calc.dailyMin !== calc.dailyMax
     ? `${rng(calc.dailyMin, calc.dailyMax)}`
@@ -831,6 +967,18 @@ function renderResultArea({
     { label: 'שלב ג׳ — מינון לכל מנה', value: `${dailyNumStr} מ"ג ÷ ${dosesPerDay} מנות = ${perDoseStr} למנה` },
     { label: 'שלב ד׳ — נפח לכל מנה', value: `${perDoseStr} ÷ ${concentration} מ"ג/מ"ל = ${volStr} למנה` },
   ];
+
+  // Clinician-chosen rounding: the steps above keep the exact math; from here
+  // on (summary, print, share) only the rounded amount is shown.
+  const exactVolStr = volStr;
+  if (rounding) {
+    const one = rounding.volMin === rounding.volMax;
+    volStr = one ? `${rounding.volMin} מ"ל` : `${rng(rounding.volMin, rounding.volMax)} מ"ל`;
+    const pMin = round2(rounding.volMin * concentration), pMax = round2(rounding.volMax * concentration);
+    perDoseStr = one ? `${pMin} מ"ג` : `${rng(pMin, pMax)} מ"ג`;
+    allSteps.push({ label: 'שלב ה׳ — עיגול (בחירת הקלינאי)', value: `${exactVolStr} ← ${volStr} למנה (${perDoseStr})${rounding.outside ? ' · מחוץ לטווח שהוזן' : ''}` });
+  }
+  const volDisplay = `<span class="highlight">${volStr}</span>`;
 
   const freeWarningHtml = freeMode ? `
     <div class="warning-box" style="background:var(--danger-light);border-color:#fecaca;color:var(--danger);">
@@ -852,7 +1000,8 @@ function renderResultArea({
         <div class="result-summary">
           <div class="summary-line">
             תן ${volDisplay} — ${freqStr}${durationStr ? `<br>למשך ${durationStr}` : ''}<br>
-            <span style="font-size:.88rem;font-weight:500;color:var(--gray-500);">ריכוז: ${concentration} מ"ג/מ"ל · מינון: ${perDoseStr} לנטילה</span>
+            <span style="font-size:.88rem;font-weight:500;color:var(--gray-500);">ריכוז: ${concentration} מ"ג/מ"ל · מינון: ${perDoseStr} לנטילה</span>${rounding ? `<br>
+            <span style="font-size:.85rem;font-weight:500;color:var(--gray-500);">מעוגל · ערך מדויק: ${exactVolStr}</span>` : ''}
           </div>
         </div>
 
@@ -883,6 +1032,7 @@ function renderResultArea({
       `⚖️ משקל: ${weight} ק"ג\n` +
       sep +
       `🥄 *לתת ${volStr} בכל פעם*\n` +
+      (rounding ? `🔄 מעוגל · ערך מדויק: ${exactVolStr}\n` : '') +
       `🕐 ${freqStr}\n` +
       (durationStr ? `📅 למשך ${durationStr}\n` : '') +
       `💉 ${perDoseStr} למנה\n` +
@@ -979,6 +1129,7 @@ function renderResultArea({
     result.appendChild(el('p', 'result-freq', freqStr));
     if (durationStr) result.appendChild(el('p', 'result-dur', `למשך ${durationStr}`));
     result.appendChild(el('p', 'result-meta', `${perDoseStr} למנה · ריכוז ${concentration} מ"ג/מ"ל`));
+    if (rounding) result.appendChild(el('p', 'result-meta', `מעוגל · ערך מדויק: ${exactVolStr}`));
     sheet.appendChild(result);
 
     if (doctorNotes || catalogNotes) {
