@@ -2,3 +2,7 @@
 
 # Stray test screenshots must never be published (repo root = live site)
 /*.png
+
+# Local copy of supabase-js for tests/admin-flows.mjs
+/tests/node_modules/
+/tests/package*.json
