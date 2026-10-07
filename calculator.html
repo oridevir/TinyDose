@@ -62,6 +62,19 @@ import { supabase, round2, esc, calculateDose } from './app.js';
 // text; without an LTR isolate the RTL page shows them as "9.75–6.5".
 const rng = (a, b) => `\u2066${a}–${b}\u2069`;
 
+// Steps ב (+ the cap step when only the top of a dose range exceeds the max daily dose)
+function dailyDoseSteps(weight, doseStr, calc, maxDailyDoseMg) {
+  const dailyStr = calc.hasRange && calc.dailyMin !== calc.uncappedDailyMax
+    ? `${rng(calc.dailyMin, calc.uncappedDailyMax)} מ"ג`
+    : `${calc.dailyMin} מ"ג`;
+  const steps = [{ label: 'שלב ב׳ — מינון יומי', value: `${weight} ק"ג × ${doseStr} מ"ג/ק"ג/יום = ${dailyStr} ליום` }];
+  if (calc.capped) {
+    const capRange = calc.dailyMin !== calc.dailyMax ? rng(calc.dailyMin, calc.dailyMax) : `${calc.dailyMin}`;
+    steps.push({ label: 'הגבלה למקסימום היומי', value: `הקצה העליון (${calc.uncappedDailyMax} מ"ג) מעל המקסימום היומי (${maxDailyDoseMg} מ"ג) ← ${capRange} מ"ג ליום` });
+  }
+  return steps;
+}
+
 const params = new URLSearchParams(location.search);
 const medId = params.get('id');
 // In free-calc-only mode every entry point (including old catalog links)
@@ -406,10 +419,6 @@ function renderResult(med, weight) {
   const doseStr = calc.hasRange
     ? `${rng(dose_min_mg_per_kg_day, dose_max_mg_per_kg_day)}`
     : `${dose_min_mg_per_kg_day}`;
-  const dailyStr = calc.hasRange && calc.dailyMin !== calc.dailyMax
-    ? `${rng(calc.dailyMin, calc.dailyMax)} מ"ג`
-    : `${calc.dailyMin} מ"ג`;
-
   const freqMap = { 1: 'פעם ביום', 2: 'פעמיים ביום', 3: 'שלוש פעמים ביום', 4: 'ארבע פעמים ביום' };
   const freqStr = freqMap[doses_per_day] || `${doses_per_day} פעמים ביום`;
 
@@ -422,7 +431,7 @@ function renderResult(med, weight) {
     weight,
     steps: [
       { label: 'שלב א׳ — משקל הילד', value: `${weight} ק"ג` },
-      { label: 'שלב ב׳ — מינון יומי', value: `${weight} ק"ג × ${doseStr} מ"ג/ק"ג/יום = ${dailyStr} ליום` },
+      ...dailyDoseSteps(weight, doseStr, calc, max_daily_dose_mg),
     ],
     calc,
     dosesPerDay: doses_per_day,
@@ -669,7 +678,7 @@ function renderFreeForm() {
       volEl.dataset.last = volEl.textContent;
       volEl.classList.remove('pop'); void volEl.offsetWidth; volEl.classList.add('pop');
     }
-    subEl.textContent = `${freqStr} · ${range(pMin, pMax)} מ"ג למנה`;
+    subEl.textContent = `${freqStr} · ${range(pMin, pMax)} מ"ג למנה${calc.capped ? ' · ⚠️ הוגבל למקסימום היומי' : ''}`;
     $('ff-live-tag').hidden = !rounding;
     $('ff-live-tag').textContent = rounding
       ? `מעוגל ל־${STEP_LABEL[roundState.step]} · מדויק: ${range(calc.volMin, calc.volMax)} מ"ל` : '';
@@ -731,7 +740,7 @@ function renderFreeForm() {
       </button>`;
     html = btn('down', '⬇ למטה', dn, mg(dn.volMin, dn.volMax), dn.outside ? '⚠️ מחוץ לטווח' : pct(dn))
          + btn('exact', '✓ מדויק', { volMin: calc.volMin, volMax: calc.volMax },
-               (doseLo === doseHi ? doseLo : rng(doseLo, doseHi)) + ' מ"ג/ק"ג/יום', '&nbsp;')
+               calc.capped ? mg(calc.volMin, calc.volMax) : (doseLo === doseHi ? doseLo : rng(doseLo, doseHi)) + ' מ"ג/ק"ג/יום', '&nbsp;')
          + btn('up', '⬆ למעלה', upc, mg(upc.volMin, upc.volMax), upc.outside ? '⚠️ מחוץ לטווח' : pct(upc));
     opts.innerHTML = html;
 
@@ -833,9 +842,6 @@ function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin
   });
 
   const doseStr = calc.hasRange ? `${rng(doseMin, doseMax)}` : `${doseMin}`;
-  const dailyStr = calc.hasRange && calc.dailyMin !== calc.dailyMax
-    ? `${rng(calc.dailyMin, calc.dailyMax)} מ"ג`
-    : `${calc.dailyMin} מ"ג`;
 
   const freqMap = { 1: 'פעם ביום', 2: 'פעמיים ביום', 3: 'שלוש פעמים ביום', 4: 'ארבע פעמים ביום' };
   const freqStr = freqMap[dosesPerDay] || `${dosesPerDay} פעמים ביום`;
@@ -850,7 +856,7 @@ function renderFreeResult({ drugName, patientName, patientId, diagnosis, doseMin
     weight,
     steps: [
       { label: 'שלב א׳ — משקל הילד', value: `${weight} ק"ג` },
-      { label: 'שלב ב׳ — מינון יומי', value: `${weight} ק"ג × ${doseStr} מ"ג/ק"ג/יום = ${dailyStr} ליום` },
+      ...dailyDoseSteps(weight, doseStr, calc, maxDailyDoseMg),
     ],
     calc,
     dosesPerDay,
@@ -895,7 +901,7 @@ function renderResultArea({
       adultBlockHtml = `<div class="warning-box" style="background:var(--danger-light);border-color:#fecaca;color:var(--danger);">
            <span class="warn-icon">⛔</span>
            <div>
-             <strong>המינון שחושב (${calc.dailyMax} מ"ג) חורג מהמינון המקסימלי היומי שהזנת (${maxDailyDoseMg} מ"ג).</strong><br>
+             <strong>המינון שחושב (${calc.hasRange && calc.dailyMin !== calc.dailyMax ? rng(calc.dailyMin, calc.dailyMax) : calc.dailyMax} מ"ג${calc.hasRange ? ' ליום — גם הקצה התחתון' : ''}) חורג מהמינון המקסימלי היומי שהזנת (${maxDailyDoseMg} מ"ג).</strong><br>
              במסלול חישוב חופשי המערכת אינה קובעת מינון חלופי — יש לקבוע את המינון המתאים על דעת הרופא בלבד.
            </div>
          </div>`;
@@ -980,6 +986,13 @@ function renderResultArea({
   }
   const volDisplay = `<span class="highlight">${volStr}</span>`;
 
+  const cappedWarningHtml = calc.capped ? `
+    <div class="warning-box" style="background:var(--warning-light);border-color:#fde68a;">
+      <span class="warn-icon">⚠️</span>
+      <div><strong>הקצה העליון של טווח המינון (${calc.uncappedDailyMax} מ"ג ליום) חורג מהמקסימום היומי (${maxDailyDoseMg} מ"ג).</strong><br>
+      הטווח הוגבל עד המקסימום היומי: ${calc.dailyMin !== calc.dailyMax ? rng(calc.dailyMin, calc.dailyMax) : calc.dailyMin} מ"ג ליום.</div>
+    </div>` : '';
+
   const freeWarningHtml = freeMode ? `
     <div class="warning-box" style="background:var(--danger-light);border-color:#fecaca;color:var(--danger);">
       <div>באחריות הקלינאי לוודא את נכונות המינון ואת אי-חריגה מהמינון המקסימלי המותר.</div>
@@ -995,6 +1008,7 @@ function renderResultArea({
       <div class="result-body">
         ${allSteps.map(stepHtml).join('')}
 
+        ${cappedWarningHtml}
         ${freeWarningHtml}
 
         <div class="result-summary">

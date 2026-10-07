@@ -27,7 +27,11 @@ export function esc(str) {
  * free-calculation flow, so a fix here applies everywhere.
  *
  * IMPORTANT SAFETY BEHAVIOR:
- * When the weight-based dose exceeds maxDailyDoseMg, we do NOT silently
+ * Dose range whose LOW end is within maxDailyDoseMg but whose HIGH end is
+ * above it: the range is capped at the max daily dose (`capped: true`,
+ * `uncappedDailyMax` keeps the original high end) so the clinician still gets
+ * a usable range, and the UI must say that the top of the range was capped.
+ * When even the low end (or a fixed dose) exceeds maxDailyDoseMg, we do NOT silently
  * clamp the number and continue computing a syrup volume from it. Instead
  * we flag `exceeded: true` and stop the pediatric math. If an adult ceiling
  * (adultMaxDailyDoseMg) was provided, we compute the adult ml-per-dose
@@ -52,9 +56,11 @@ export function calculateDose({
   const hasRange = doseMax != null && doseMax !== doseMin;
 
   const dailyMin = round2(doseMin * weight);
-  const dailyMax = hasRange ? round2(doseMax * weight) : dailyMin;
+  const uncappedDailyMax = hasRange ? round2(doseMax * weight) : dailyMin;
 
-  const exceeded = maxDailyDoseMg != null && dailyMax > maxDailyDoseMg;
+  const exceeded = maxDailyDoseMg != null && dailyMin > maxDailyDoseMg;
+  const capped = !exceeded && maxDailyDoseMg != null && uncappedDailyMax > maxDailyDoseMg;
+  const dailyMax = capped ? round2(maxDailyDoseMg) : uncappedDailyMax;
 
   if (exceeded) {
     let adultPerDoseMg = null;
@@ -64,7 +70,7 @@ export function calculateDose({
       adultVolMl = round2(adultPerDoseMg / concentration);
     }
     return {
-      hasRange, dailyMin, dailyMax, exceeded: true,
+      hasRange, dailyMin, dailyMax, uncappedDailyMax, capped: false, exceeded: true,
       perDoseMin: null, perDoseMax: null, volMin: null, volMax: null,
       adultPerDoseMg, adultVolMl,
     };
@@ -76,5 +82,5 @@ export function calculateDose({
   const volMin = round2(perDoseMin / concentration);
   const volMax = hasRange ? round2(perDoseMax / concentration) : volMin;
 
-  return { hasRange, dailyMin, dailyMax, exceeded: false, perDoseMin, perDoseMax, volMin, volMax };
+  return { hasRange, dailyMin, dailyMax, uncappedDailyMax, capped, exceeded: false, perDoseMin, perDoseMax, volMin, volMax };
 }

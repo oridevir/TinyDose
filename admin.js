@@ -7,7 +7,7 @@ const LINES = { first: 'קו ראשון', alternative: 'חלופה', allergy: '�
 const LINE_ORDER = { first: 0, alternative: 1, allergy: 2 };
 const PREVIEW_WEIGHTS = [5, 10, 20];
 const SMALL_VOL_ML = 1;   // below this a dose is hard to measure
-const LARGE_VOL_ML = 15;  // above this a dose is hard to give a child
+const LARGE_VOL_ML = 20;  // above this a dose is hard to give a child
 const WIDE = window.matchMedia('(min-width: 900px)');
 
 const S = { cats: [], inds: [], drugs: [], prods: [], recs: [] };
@@ -105,6 +105,7 @@ function previewFor(r, weight) {
     const flags = [];
     if (calc.exceeded) flags.push({ level: 'bad', text: `חריגה: ${calc.dailyMax} מ"ג ליום, המקסימום ${d.max_daily_dose_mg} מ"ג` });
     else {
+      if (calc.capped) flags.push({ level: 'warn', text: `הקצה העליון הוגבל למקסימום היומי (${d.max_daily_dose_mg} מ"ג)` });
       if (calc.volMin < SMALL_VOL_ML) flags.push({ level: 'warn', text: 'נפח קטן מאוד — קשה למדוד' });
       if (calc.volMax > LARGE_VOL_ML) flags.push({ level: 'warn', text: 'נפח גדול מאוד' });
     }
