@@ -79,8 +79,15 @@ export function calculateDose({
   const perDoseMin = round2(dailyMin / dosesPerDay);
   const perDoseMax = hasRange ? round2(dailyMax / dosesPerDay) : perDoseMin;
 
-  const volMin = round2(perDoseMin / concentration);
-  const volMax = hasRange ? round2(perDoseMax / concentration) : volMin;
+  // Volumes are shown to 0.01 ml. With a max daily dose, never let that display
+  // rounding push the amount above the max (matters for tiny volumes): round down instead.
+  const toVol = mg => {
+    const v = round2(mg / concentration);
+    return maxDailyDoseMg != null && v * concentration * dosesPerDay > maxDailyDoseMg + 1e-9
+      ? Math.floor(mg / concentration * 100 + 1e-9) / 100 : v;
+  };
+  const volMin = toVol(perDoseMin);
+  const volMax = hasRange ? toVol(perDoseMax) : volMin;
 
   return { hasRange, dailyMin, dailyMax, uncappedDailyMax, capped, exceeded: false, perDoseMin, perDoseMax, volMin, volMax };
 }

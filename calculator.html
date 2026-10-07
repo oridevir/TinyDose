@@ -619,7 +619,7 @@ function renderFreeForm() {
       weight: parseFloat(weightInput.value),
       doseMin: parseFloat($('ff-dose-min').value),
       doseMax: doseMaxRaw ? parseFloat(doseMaxRaw) : null,
-      dosesPerDay: parseInt($('ff-doses').value),
+      dosesPerDay: parseFloat($('ff-doses').value),
       concMg: parseFloat(concMgInput.value),
       concMl: parseFloat(concMlInput.value),
       maxDailyDoseMg: maxDailyRaw ? parseFloat(maxDailyRaw) : null,
@@ -642,6 +642,14 @@ function renderFreeForm() {
       hideRounding();
       return;
     }
+    if (!Number.isInteger(f.dosesPerDay)) {
+      volEl.textContent = '—'; volEl.classList.remove('is-range');
+      subEl.textContent = 'מספר המנות ביום חייב להיות מספר שלם';
+      drawCup(null);
+      showResultPlaceholder('מספר המנות ביום חייב להיות מספר שלם (1, 2, 3...). יש לתקן את השדה.');
+      hideRounding();
+      return;
+    }
     if (f.doseMax != null && f.doseMax < f.doseMin) {
       volEl.textContent = '—'; volEl.classList.remove('is-range');
       subEl.textContent = 'מינון ה"עד" קטן מה"מ-"';
@@ -652,7 +660,7 @@ function renderFreeForm() {
     }
     const calc = calculateDose({
       weight: f.weight, doseMin: f.doseMin, doseMax: f.doseMax,
-      concentration: round2(f.concMg / f.concMl), dosesPerDay: f.dosesPerDay,
+      concentration: f.concMg / f.concMl, dosesPerDay: f.dosesPerDay,
       maxDailyDoseMg: f.maxDailyDoseMg,
     });
     const freqMap = { 1: 'פעם ביום', 2: 'פעמיים ביום', 3: 'שלוש פעמים ביום', 4: 'ארבע פעמים ביום' };
@@ -793,7 +801,7 @@ function renderFreeForm() {
   function renderDetails(f, rounding = null) {
     const notesEl = document.getElementById('doctor-notes');
     const notes = notesEl ? notesEl.value : '';
-    renderFreeResult({ ...f, conc: round2(f.concMg / f.concMl), scroll: false, rounding });
+    renderFreeResult({ ...f, conc: f.concMg / f.concMl, scroll: false, rounding });
     const newNotes = document.getElementById('doctor-notes');
     if (newNotes) newNotes.value = notes;
   }
@@ -971,7 +979,7 @@ function renderResultArea({
   const allSteps = [
     ...steps,
     { label: 'שלב ג׳ — מינון לכל מנה', value: `${dailyNumStr} מ"ג ÷ ${dosesPerDay} מנות = ${perDoseStr} למנה` },
-    { label: 'שלב ד׳ — נפח לכל מנה', value: `${perDoseStr} ÷ ${concentration} מ"ג/מ"ל = ${volStr} למנה` },
+    { label: 'שלב ד׳ — נפח לכל מנה', value: `${perDoseStr} ÷ ${round2(concentration)} מ"ג/מ"ל = ${volStr} למנה` },
   ];
 
   // Clinician-chosen rounding: the steps above keep the exact math; from here
@@ -1014,7 +1022,7 @@ function renderResultArea({
         <div class="result-summary">
           <div class="summary-line">
             תן ${volDisplay} — ${freqStr}${durationStr ? `<br>למשך ${durationStr}` : ''}<br>
-            <span style="font-size:.88rem;font-weight:500;color:var(--gray-500);">ריכוז: ${concentration} מ"ג/מ"ל · מינון: ${perDoseStr} לנטילה</span>${rounding ? `<br>
+            <span style="font-size:.88rem;font-weight:500;color:var(--gray-500);">ריכוז: ${round2(concentration)} מ"ג/מ"ל · מינון: ${perDoseStr} לנטילה</span>${rounding ? `<br>
             <span style="font-size:.85rem;font-weight:500;color:var(--gray-500);">מעוגל · ערך מדויק: ${exactVolStr}</span>` : ''}
           </div>
         </div>
@@ -1142,7 +1150,7 @@ function renderResultArea({
     result.appendChild(el('p', 'result-vol', volStr));
     result.appendChild(el('p', 'result-freq', freqStr));
     if (durationStr) result.appendChild(el('p', 'result-dur', `למשך ${durationStr}`));
-    result.appendChild(el('p', 'result-meta', `${perDoseStr} למנה · ריכוז ${concentration} מ"ג/מ"ל`));
+    result.appendChild(el('p', 'result-meta', `${perDoseStr} למנה · ריכוז ${round2(concentration)} מ"ג/מ"ל`));
     if (rounding) result.appendChild(el('p', 'result-meta', `מעוגל · ערך מדויק: ${exactVolStr}`));
     sheet.appendChild(result);
 
