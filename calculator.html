@@ -582,10 +582,11 @@ function renderFreeForm() {
   const SVGNS = 'http://www.w3.org/2000/svg';
   const CUP_TOP = 12, CUP_BOTTOM = 112;
   let cupCapacity = null;
-  function drawCup(vol) {
+  // vol = liquid level; sizeFor = amount the cup must hold (a range's top end)
+  function drawCup(vol, sizeFor = vol) {
     const liquid = $('ff-liquid');
     if (!(vol > 0)) { liquid.style.transform = 'translateY(118px)'; return; }
-    const cap = vol <= 10 ? 10 : vol <= 20 ? 20 : 30;
+    const cap = sizeFor <= 10 ? 10 : sizeFor <= 20 ? 20 : 30;
     if (cap !== cupCapacity) {
       cupCapacity = cap;
       const ticks = $('ff-cup-ticks');
@@ -601,11 +602,11 @@ function renderFreeForm() {
         label.setAttribute('x', edgeX - 4); label.setAttribute('y', y + 3); label.setAttribute('text-anchor', 'end'); label.textContent = v;
         ticks.append(line, label);
       }
-      $('ff-cup-size').textContent = `כוס ${cap} מ"ל`;
     }
     const f = Math.min(vol, cap) / cap;
     liquid.style.transform = `translateY(${CUP_BOTTOM - (CUP_BOTTOM - CUP_TOP) * f}px)`;
-    if (vol > 30) $('ff-cup-size').textContent = 'יותר מכוס אחת';
+    // Set every time (not only when the cup size changes), so it never keeps a stale label
+    $('ff-cup-size').textContent = sizeFor > 30 ? 'יותר מכוס אחת' : `כוס ${cap} מ"ל`;
   }
 
   function readForm() {
@@ -690,7 +691,7 @@ function renderFreeForm() {
     $('ff-live-tag').hidden = !rounding;
     $('ff-live-tag').textContent = rounding
       ? `מעוגל ל־${STEP_LABEL[roundState.step]} · מדויק: ${range(calc.volMin, calc.volMax)} מ"ל` : '';
-    drawCup(vMax);
+    drawCup((vMin + vMax) / 2, vMax);   // a range fills the cup to its midpoint; cup sized for the top end
     renderDetails(f, rounding);
   }
 
