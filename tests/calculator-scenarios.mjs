@@ -107,6 +107,7 @@ const read = () => p.evaluate(() => ({
   sub: document.getElementById('ff-live-sub').textContent,
   details: document.getElementById('result-area').textContent,
   roundHidden: document.getElementById('ff-round').hidden,
+  hasReset: !!document.getElementById('reset-btn'),
   inputs: [...document.querySelectorAll('.ff input')].map(i => [i.id, i.value]),
 }));
 
@@ -123,6 +124,7 @@ for (const [idx, s] of S.entries()) {
   const br = badRanges(all); if (br.length) fail(s, `range without LTR isolation: ${br.join(', ')}`);
   if (s.expect && s.expect !== e.kind) fail(s, `oracle says ${e.kind}, scenario expects ${s.expect}`);
 
+  if (!r.hasReset) fail(s, `no reset button (state: ${e.kind})`);
   if (e.kind === 'not-ready' || e.kind === 'invalid-range') {
     if (clean(r.vol).trim() !== '—') fail(s, `expected no result (${e.kind}), bubble shows "${r.vol}"`);
     if (/תן\s/.test(r.details)) fail(s, `expected no result (${e.kind}), details give a volume`);
@@ -212,6 +214,12 @@ const afterReset = await read();
 const leftovers = afterReset.inputs.filter(([id, v]) => v !== '' && id !== 'ff-weight-slider');
 if (leftovers.length) failures.push('reset: fields not cleared: ' + JSON.stringify(leftovers));
 if (clean(afterReset.vol).trim() !== '—') failures.push('reset: bubble still shows ' + afterReset.vol);
+// reset works from the exceeded state too
+await setForm({ w: 15, dmin: 50, dmax: null, n: 2, cmg: 250, cml: 5, max: 600 });
+await p.click('#reset-btn'); await p.waitForTimeout(200);
+const afterReset2 = await read();
+if (afterReset2.inputs.some(([id, v]) => v !== '' && id !== 'ff-weight-slider')) failures.push('reset from exceeded state did not clear the form');
+if (afterReset2.hasReset) failures.push('fresh empty form should not show a reset button');
 // slider ↔ weight sync
 await p.fill('#ff-weight', '45');
 if ((await p.inputValue('#ff-weight-slider')) !== '40') failures.push('slider: weight 45 should park slider at 40');

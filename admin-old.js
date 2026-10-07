@@ -1,5 +1,5 @@
 // admin.js
-import { supabase, round2, esc, calculateDose } from './app.js';
+import { supabase, round2, esc, calculateDose } from './app.js?v=20261007b';
 
 let indicationsData = [];
 let categoriesData = [];

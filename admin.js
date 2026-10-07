@@ -1,7 +1,7 @@
 // admin.js — drug database admin, organised by diagnosis (see CLAUDE.md section 9)
 // Phone: the treatment-option editor is a step-by-step wizard.
 // Desktop (wide screen): the same editor is one page with a live preview column.
-import { supabase, calculateDose, round2, esc } from './app.js';
+import { supabase, calculateDose, round2, esc } from './app.js?v=20261007b';
 
 const LINES = { first: 'קו ראשון', alternative: 'חלופה', allergy: 'אלרגיה לפניצילין' };
 const LINE_ORDER = { first: 0, alternative: 1, allergy: 2 };

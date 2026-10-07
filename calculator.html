@@ -56,7 +56,7 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { supabase, round2, esc, calculateDose } from './app.js';
+import { supabase, round2, esc, calculateDose } from './app.js?v=20261007b';
 
 // Numeric ranges like "6.5–9.75" must read left to right even inside Hebrew
 // text; without an LTR isolate the RTL page shows them as "9.75–6.5".
@@ -807,7 +807,11 @@ function renderFreeForm() {
   }
 
   function showResultPlaceholder(text) {
-    $('result-area').innerHTML = `<div class="ff-placeholder">${esc(text)}</div>`;
+    // Offer reset as soon as anything was typed (nothing to reset on a fresh form)
+    const anyTyped = [...document.querySelectorAll('.ff input:not([type=range])')].some(i => i.value !== '');
+    $('result-area').innerHTML = `<div class="ff-placeholder">${esc(text)}${anyTyped
+      ? '<div style="margin-top:12px;"><button class="btn btn-sm act-reset" id="reset-btn">↺ איפוס</button></div>' : ''}</div>`;
+    bindReset(true);
   }
 
   function concResult() {
@@ -949,7 +953,7 @@ function renderResultArea({
 
     resultArea.innerHTML = `
       <div class="result-card">
-        <div class="result-header" style="background:var(--warning);">
+        <div class="result-header" style="background:#ef5a6f;">
           <div class="result-drug">${esc(drugName)}</div>
           <div class="result-indication">${esc(indicationDisplay)}${indicationEn ? ' · ' + esc(indicationEn) : ''}</div>
           ${patientHeaderHtml}
@@ -958,8 +962,12 @@ function renderResultArea({
           ${steps.map(stepHtml).join('')}
           ${adultBlockHtml}
         </div>
+        <div class="result-actions">
+          <button class="btn btn-sm act-reset" id="reset-btn">↺ איפוס</button>
+        </div>
       </div>
     `;
+    bindReset(freeMode);
     if (scroll) document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
     return;
   }
@@ -1184,7 +1192,16 @@ function renderResultArea({
     printWin.print();
   });
 
-  document.getElementById('reset-btn').addEventListener('click', () => {
+  bindReset(freeMode);
+
+  if (scroll) document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Reset is available in every state of the result area (valid, exceeded, incomplete)
+function bindReset(freeMode) {
+  const btn = document.getElementById('reset-btn');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
     if (freeMode) {
       renderFreeForm();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1194,8 +1211,6 @@ function renderResultArea({
     const wInput = document.getElementById('weight-input') || document.getElementById('ff-weight');
     if (wInput) { wInput.value = ''; wInput.focus(); }
   });
-
-  if (scroll) document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
 }
 
 function showToast(msg) {
