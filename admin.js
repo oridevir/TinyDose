@@ -160,13 +160,27 @@ function verifyChecklist(r, onConfirm) {
 }
 
 // ── Data ──
+// Right after login / token refresh the server sometimes rejects one request with
+// 401 (PGRST303, seen in the Supabase logs) while the same token works a moment
+// later. So a rejected login token gets two quiet retries before we show an error.
+const sleep = ms => new Promise(res => setTimeout(res, ms));
+async function withRetry(makeQuery) {
+  let res;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await makeQuery();
+    if (!(res.error && (res.status === 401 || res.error.code === 'PGRST303' || res.error.code === 'PGRST301'))) break;
+    await sleep(700 * (attempt + 1));
+  }
+  return res;
+}
+
 async function loadAll() {
   const [c, i, d, p, r] = await Promise.all([
-    supabase.from('categories').select('*').order('sort_order').order('name_he'),
-    supabase.from('indications').select('*').order('name_he'),
-    supabase.from('drugs').select('*').order('name_he'),
-    supabase.from('products').select('*').order('brand_name'),
-    supabase.from('recommendations').select('*'),
+    withRetry(() => supabase.from('categories').select('*').order('sort_order').order('name_he')),
+    withRetry(() => supabase.from('indications').select('*').order('name_he')),
+    withRetry(() => supabase.from('drugs').select('*').order('name_he')),
+    withRetry(() => supabase.from('products').select('*').order('brand_name')),
+    withRetry(() => supabase.from('recommendations').select('*')),
   ]);
   const err = [c, i, d, p, r].find(x => x.error);
   if (err) { toast('שגיאה בטעינת הנתונים: ' + err.error.message); return false; }
@@ -177,14 +191,14 @@ async function loadAll() {
 // Insert or update; returns the saved row, or null on error
 async function saveRow(table, id, payload) {
   payload = { ...payload, updated_at: new Date().toISOString() };
-  const q = id ? supabase.from(table).update(payload).eq('id', id) : supabase.from(table).insert(payload);
-  const { data, error } = await q.select().single();
+  const { data, error } = await withRetry(() =>
+    (id ? supabase.from(table).update(payload).eq('id', id) : supabase.from(table).insert(payload)).select().single());
   if (error) { toast('שגיאה בשמירה: ' + error.message); return null; }
   return data;
 }
 
 async function deleteRow(table, id, inUseMsg) {
-  const { error } = await supabase.from(table).delete().eq('id', id);
+  const { error } = await withRetry(() => supabase.from(table).delete().eq('id', id));
   if (error) { toast(isFkError(error) ? inUseMsg : 'שגיאה במחיקה: ' + error.message); return false; }
   return true;
 }
