@@ -65,7 +65,13 @@ check(!(await p.$('#dbp-open')), 'switch off: no "בחירה מהמאגר" butto
 
 // 2. Preview with ?db=1
 p = await page('https://tinydose.test/calculator.html?db=1');
-await p.click('#dbp-open'); await p.waitForSelector('.dbp-row');
+check(await p.$eval('#dbp-picked', e => getComputedStyle(e).display === 'none'), 'database panel really invisible before a choice');
+await p.evaluate(() => window.scrollTo(0, 0));
+await p.evaluate(() => document.getElementById('dbp-open').click());   // no auto-scroll, like a real tap
+await p.waitForSelector('.dbp-overlay:not([hidden]) .dbp-row');
+const vis = await p.evaluate(() => { const r = document.querySelector('.dbp-sheet').getBoundingClientRect();
+  return { pos: getComputedStyle(document.querySelector('.dbp-overlay')).position, top: r.top, bottom: r.bottom, h: innerHeight, y: scrollY }; });
+check(vis.pos === 'fixed' && vis.top >= 0 && vis.bottom <= vis.h + 1 && vis.y === 0, `window opens on screen without scrolling (${JSON.stringify(vis)})`);
 const home = await txt(p, '#dbp-body');
 check(home.includes('אוטיטיס מדיה') && home.includes('זיהום בדרכי השתן'), 'home lists diagnoses by category');
 check(!home.includes('אוטיטיס אקסטרנה'), 'diagnosis without options is hidden');

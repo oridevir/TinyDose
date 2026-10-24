@@ -845,6 +845,7 @@ input[type=number] { direction: ltr; text-align: right; }
    free calculation, and the browse window. Hidden unless DB_PICKER (config.js) or ?db=1. */
 .dbp-open-btn { align-self: center; border: none; border-radius: 999px; padding: 12px 26px; background: var(--bubble, #2b9df4); color: #fff; font: inherit; font-size: 1.05rem; cursor: pointer; box-shadow: 0 5px 0 #1d7fd0; }
 .dbp-open-btn:active { transform: translateY(2px); box-shadow: 0 3px 0 #1d7fd0; }
+.dbp-picked[hidden] { display: none; }
 .dbp-picked { background: #fff; border: 2px solid #bfe0fb; border-radius: 22px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: .92rem; text-align: right; }
 .dbp-picked-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .dbp-clear { flex: none; border: 1.5px solid #c9dcf2; background: #fff; color: #3b5b85; border-radius: 999px; padding: 4px 12px; font: inherit; font-size: .85rem; cursor: pointer; }
@@ -861,6 +862,9 @@ input[type=number] { direction: ltr; text-align: right; }
 body.dbp-open { overflow: hidden; }
 .dbp-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(30,47,107,.35); display: flex; align-items: flex-end; justify-content: center; }
 .dbp-overlay[hidden] { display: none; }
+/* The free-calc page lifts every direct child of <body> above the sky
+   (.ff-page > *:not(.sky) { position: relative }). The window must stay fixed over the page. */
+.ff-page > .dbp-overlay { position: fixed; z-index: 50; }
 .dbp-sheet { background: #fff; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; border-radius: 24px 24px 0 0; padding: 14px 16px 22px; display: flex; flex-direction: column; gap: 10px; font-family: 'Varela Round', -apple-system, 'Segoe UI', Arial, sans-serif; color: #1e2f6b; box-sizing: border-box; }
 @media (min-width: 700px) { .dbp-overlay { align-items: center; } .dbp-sheet { border-radius: 24px; max-height: 86vh; } }
 .dbp-head { display: flex; align-items: center; gap: 8px; position: sticky; top: -14px; background: #fff; padding: 4px 0; z-index: 1; }

@@ -291,6 +291,8 @@ tinydose.drdevir.com
 - **בדיקות Playwright בסביבת הענן:** `cdn.jsdelivr.net` חסום ברשת → לטעון עותק מקומי של supabase-js (מ-npm) דרך `page.route`, ולדמות את Supabase בזיכרון (לא לגעת במאגר האמיתי).
 - **Supabase — 401 אקראי מיד אחרי כניסה/חידוש טוקן** (שגיאה `PGRST303`, נראה ביומני Supabase): בקשה אחת מתוך כמה מקבילות נדחית, אותו טוקן עובד שנייה אחר כך. לכן ב-`admin.js` כל פנייה עוברת דרך `withRetry()` (עד 2 ניסיונות חוזרים). `admin-old.js` לא תוקן.
 - **טבלת `_keepalive` במאגר** (לא מהקוד באתר): משהו חיצוני קורא לפונקציה `keepalive()` כדי שסופבייס לא יקפיא את הפרויקט החינמי. ב-2026-10-21 הופעלה על הטבלה אבטחה ברמת השורה (בעקבות מייל התראה מסופבייס), ורק `service_role` רשאי להריץ את הפונקציה (`search_path` ריק). הפינג מגיע מ-GitHub Actions בריפו `oridevir/supabase-keepalive` עם מפתח `sb_secret_` (= service_role, עוקף RLS), ולכן ממשיך לעבוד. פרטים מלאים ב-`STATUS.md` שם.
+- **בדף החישוב `.ff-page > *:not(.sky)` נותן `position: relative` לכל ילד ישיר של `<body>`** — גובר על `position: fixed` של חלון שמוסיפים ל-body (החלון נפתח מתחת לפוטר, מחוץ למסך). צריך כלל ספציפי יותר (`.ff-page > .dbp-overlay`). וגם: `display: flex` על אלמנט גובר על המאפיין `hidden` → להוסיף `[hidden] { display: none }`.
+- **בדיקות Playwright: `click()` גולל לבד אל האלמנט** — לכן לא תופסת חלון שנפתח מחוץ למסך. לבדוק נראוּת ב-`getBoundingClientRect()` אחרי לחיצה בלי גלילה (`el.click()` מתוך `evaluate`), ותצוגה ב-`getComputedStyle`, לא רק `el.hidden`.
 - **SVG** אין לו `offsetTop` → למדוד עם `getBoundingClientRect()`.
 - **סדר טעינה:** הניתוב בראש ה-script רץ לפני הגדרות `let` שמתחתיו → להשתמש במאפיין של פונקציה או `var`.
 - **רקע עם עיגולים במיקום באחוזים** מתפרק במסך רחב → לצייר כל ענן כצורה אחת.
