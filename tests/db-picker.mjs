@@ -63,6 +63,7 @@ const share = async p => (await rawShare(p))?.replace(ISO, '');
 let p = await page('https://tinydose.test/calculator.html');
 check(!(await p.$('#dbp-open')), 'switch off: no "בחירה מהמאגר" button');
 check(!(await p.$('.wind-toggle')), 'switch off: no clouds button');
+check(!(await p.$('.ff-calc-title')), 'live page: no calculation title (experiment only)');
 
 // 2. Preview with ?db=1
 p = await page('https://tinydose.test/calculator.html?db=1');
@@ -175,6 +176,11 @@ await p.setViewportSize({ width: 390, height: 420 });   // like a keyboard takin
 await p.fill('#dbp-q', 'אמוקס'); await p.waitForTimeout(200);
 const kb = await p.evaluate(() => { const r = document.querySelector('#dbp-body .dbp-pill').getBoundingClientRect(); return { b: r.bottom, h: innerHeight }; });
 check(kb.b <= kb.h, `search: first result visible above the keyboard (${JSON.stringify(kb)})`);
+
+// Experiment page: title right above the calculation details; clouds button in the footer
+p = await page('https://tinydose.test/calculator.html?db=1');
+check(await p.evaluate(() => { const t = document.querySelector('.ff-calc-title'); return !!t && t.nextElementSibling?.id === 'result-area' && t.textContent.includes('פירוט חישוב המינון'); }), 'experiment page: "פירוט חישוב המינון" title above the details');
+check(await p.evaluate(() => !!document.querySelector('footer .wind-toggle')), 'clouds button sits in the footer (does not cover the reset button)');
 
 // 9. Wind (experiment): clouds drift right, near layer faster than far; off stops them
 p = await page('https://tinydose.test/calculator.html?db=1');
