@@ -39,7 +39,7 @@ const b = await chromium.launch(); const errs = []; const fails = [];
 const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? 'ok   ' : 'FAIL ') + msg); };
 async function page(url, vp = { width: 390, height: 844 }, { pickerOff = false } = {}) {
   const ctx = await b.newContext({ viewport: vp });
-  await ctx.route('https://tinydose.test/**', r => { const p = new URL(r.request().url()).pathname; const f = path.join(ROOT, p); if (!fs.existsSync(f)) return r.fulfill({ status: 404, body: '' }); r.fulfill({ status: 200, contentType: MIME[path.extname(f)] || 'application/octet-stream', body: fs.readFileSync(f) }); });
+  await ctx.route('https://tinydose.test/**', r => { const p = new URL(r.request().url()).pathname; const f = path.join(ROOT, p.endsWith('/') ? p + 'index.html' : p); if (!fs.existsSync(f)) return r.fulfill({ status: 404, body: '' }); r.fulfill({ status: 200, contentType: MIME[path.extname(f)] || 'application/octet-stream', body: fs.readFileSync(f) }); });
   // pickerOff: serve config.js with DB_PICKER = false, to test the switch whatever its current value
   if (pickerOff) await ctx.route('https://tinydose.test/config.js*', r => r.fulfill({ status: 200, contentType: 'text/javascript',
     body: fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8').replace(/window\.DB_PICKER = (true|false);/, 'window.DB_PICKER = false;') }));
@@ -66,6 +66,13 @@ const share = async p => (await rawShare(p))?.replace(ISO, '');
 let p = await page('https://tinydose.test/calculator.html', undefined, { pickerOff: true });
 check(!(await p.$('#dbp-open')), 'switch off: no "בחירה מהמאגר" button');
 check(!(await p.$('.ff-calc-title')), 'switch off: no calculation title');
+// The address shows the site root, not /calculator.html; reloading it brings the calculator back
+p = await page('https://tinydose.test/calculator.html?db=1');
+check(await p.evaluate(() => location.pathname + location.search) === '/?db=1', 'address bar: tinydose.../ (no calculator.html), query kept');
+await p.reload(); await p.waitForSelector('#ff-weight');
+check(await p.evaluate(() => location.pathname) === '/', 'reload of the plain address shows the calculator again');
+await p.goto('https://tinydose.test/'); await p.waitForSelector('#ff-weight');
+check(await p.evaluate(() => location.pathname) === '/', 'opening the plain address shows the calculator');
 // Switch as set in config.js now (on since 2026-10-25): the button is there without ?db=1
 p = await page('https://tinydose.test/calculator.html');
 check(!!(await p.$('#dbp-open')) === /window\.DB_PICKER = true;/.test(fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8')), 'live page follows the DB_PICKER switch in config.js');

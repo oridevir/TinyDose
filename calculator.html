@@ -88,6 +88,12 @@ const indicationParam = params.get('indication');
 
 const main = document.getElementById('main-content');
 
+// The free calculation is the whole site: show the plain address (tinydose.drdevir.com/)
+// instead of /calculator.html. Reloading "/" works too — index.html sends it back here.
+if (window.FREE_CALC_ONLY && /\/calculator\.html$/.test(location.pathname)) {
+  history.replaceState(null, '', './' + location.search + location.hash);
+}
+
 // ── Entry routing ──
 if (freeMode) {
   renderFreeForm();

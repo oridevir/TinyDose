@@ -18,7 +18,7 @@
   <script src="config.js?v=20261025a"></script>
   <script>
     // Free-calc-only mode: skip the catalog home page entirely.
-    if (window.FREE_CALC_ONLY) location.replace('calculator.html');
+    if (window.FREE_CALC_ONLY) location.replace('calculator.html' + location.search + location.hash);
   </script>
 </head>
 <body>
