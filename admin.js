@@ -93,19 +93,25 @@ function similarDrugs(names, excludeId) {
 }
 
 // ── Preview + safety checks (same calculateDose() as the calculator) ──
+// Daily max for a treatment option: its own (per diagnosis) if set, else the drug's
+function effMax(r) {
+  return numOrNull(r.max_daily_dose_mg) ?? drugById(r.drug_id)?.max_daily_dose_mg ?? null;
+}
+
 function previewFor(r, weight) {
   const d = drugById(r.drug_id);
   const doseMin = +r.dose_min_mg_per_kg_day, doseMax = numOrNull(r.dose_max_mg_per_kg_day), dpd = +r.doses_per_day;
   if (!d || !(doseMin > 0) || !(dpd >= 1)) return null;
+  const max = effMax(r);
   return prodsOf(d.id).map(p => {
     const calc = calculateDose({
       weight, doseMin, doseMax, concentration: p.conc_mg / p.conc_ml, dosesPerDay: dpd,
-      maxDailyDoseMg: d.max_daily_dose_mg ?? null, adultMaxDailyDoseMg: null,
+      maxDailyDoseMg: max, adultMaxDailyDoseMg: null,
     });
     const flags = [];
-    if (calc.exceeded) flags.push({ level: 'bad', text: `חריגה: ${calc.dailyMax} מ"ג ליום, המקסימום ${d.max_daily_dose_mg} מ"ג` });
+    if (calc.exceeded) flags.push({ level: 'bad', text: `חריגה: ${calc.dailyMax} מ"ג ליום, המקסימום ${max} מ"ג` });
     else {
-      if (calc.capped) flags.push({ level: 'warn', text: `הקצה העליון הוגבל למקסימום היומי (${d.max_daily_dose_mg} מ"ג)` });
+      if (calc.capped) flags.push({ level: 'warn', text: `הקצה העליון הוגבל למקסימום היומי (${max} מ"ג)` });
       if (calc.volMin < SMALL_VOL_ML) flags.push({ level: 'warn', text: 'נפח קטן מאוד — קשה למדוד' });
       if (calc.volMax > LARGE_VOL_ML) flags.push({ level: 'warn', text: 'נפח גדול מאוד' });
     }
@@ -145,7 +151,7 @@ function verifyChecklist(r, onConfirm) {
   const items = [
     { ok: !!(r.source || '').trim(), text: 'יש מקור' },
     { ok: prodsOf(r.drug_id).length > 0, text: 'יש לפחות סירופ אחד' },
-    { ok: d?.max_daily_dose_mg != null, text: 'הוגדר מקסימום יומי לתרופה' },
+    { ok: effMax(r) != null, text: 'הוגדר מקסימום יומי (לאבחנה או לתרופה)' },
     { ok: !problems.length, text: problems.length ? `תצוגה מקדימה (5/10/20 ק"ג): ${problems.join(' · ')}` : 'התצוגה המקדימה (5/10/20 ק"ג) תקינה' },
   ];
   const allOk = items.every(i => i.ok);
@@ -233,7 +239,7 @@ function computeIssues() {
   }
   for (const d of S.drugs) {
     if (!prodsOf(d.id).length) out.push({ text: `${d.name_he}: אין סירופ`, go: { type: 'drug', id: d.id } });
-    if (d.max_daily_dose_mg == null) out.push({ text: `${d.name_he}: לא הוגדר מקסימום יומי`, go: { type: 'drug', id: d.id } });
+    if (d.max_daily_dose_mg == null && S.recs.some(r => r.drug_id === d.id && r.max_daily_dose_mg == null)) out.push({ text: `${d.name_he}: לא הוגדר מקסימום יומי`, go: { type: 'drug', id: d.id } });
   }
   return out;
 }
@@ -390,7 +396,7 @@ function optCard(r, withInd = false) {
       <h3>${esc(d?.name_he || '—')}</h3>
       <span class="chip ${r.status === 'verified' ? 's-verified' : 's-draft'}">${r.status === 'verified' ? '✓ מאומת' : '✎ טיוטה'}</span>
     </div>
-    <div>${rng(r.dose_min_mg_per_kg_day, r.dose_max_mg_per_kg_day)} מ"ג/ק"ג/יום · ${dosesText(r.doses_per_day)}${r.duration_days ? ` · ${r.duration_days} ימים` : ''}</div>
+    <div>${rng(r.dose_min_mg_per_kg_day, r.dose_max_mg_per_kg_day)} מ"ג/ק"ג/יום · ${dosesText(r.doses_per_day)}${r.duration_days ? ` · ${r.duration_days} ימים` : ''}${effMax(r) != null ? ` · מקס' ${effMax(r)} מ"ג ליום` : ''}</div>
     <div class="opt-syrups">🧴 ${ps.length ? ps.map(p => `${esc(p.brand_name)} (${concText(p)})`).join(' · ') : '<span style="color:var(--bad-ink)">אין סירופ לתרופה</span>'}</div>
     ${r.doctor_note ? `<div class="opt-note">🩺 ${esc(r.doctor_note)}</div>` : ''}
     <div class="opt-foot">
@@ -583,6 +589,7 @@ function openEditor(mode, src) {
       treatment_line: src.treatment_line || 'first',
       dose_min_mg_per_kg_day: src.dose_min_mg_per_kg_day ?? '', dose_max_mg_per_kg_day: src.dose_max_mg_per_kg_day ?? '',
       doses_per_day: src.doses_per_day ?? '', duration_days: src.duration_days ?? '',
+      max_daily_dose_mg: src.max_daily_dose_mg ?? '',
       doctor_note: src.doctor_note || '', parent_note: src.parent_note || '', source: src.source || '',
       sort_order: src.sort_order ?? 0,
     },
@@ -598,6 +605,7 @@ function validate(step) {
     if (r.dose_max_mg_per_kg_day !== '' && +r.dose_max_mg_per_kg_day < +r.dose_min_mg_per_kg_day) return '"עד" קטן מהמינון';
     if (!(Number.isInteger(+r.doses_per_day) && +r.doses_per_day >= 1 && +r.doses_per_day <= 6)) return 'מנות ביום: מספר שלם בין 1 ל-6';
     if (r.duration_days !== '' && !(Number.isInteger(+r.duration_days) && +r.duration_days > 0)) return 'משך טיפול: מספר ימים שלם (או ריק)';
+    if (r.max_daily_dose_mg !== '' && !(+r.max_daily_dose_mg > 0)) return 'מקסימום יומי: מספר חיובי (או ריק)';
   }
   return null;
 }
@@ -673,7 +681,7 @@ function secDose() {
   // Same drug already used for another diagnosis → offer to copy its dosing
   const others = d ? sortRecs(S.recs.filter(x => x.drug_id === d.id && x.id !== E.id)) : [];
   return `<h2>2 · מינון</h2>
-    ${d ? `<div class="small">${esc(d.name_he)} · מקסימום יומי ${d.max_daily_dose_mg != null ? d.max_daily_dose_mg + ' מ"ג' : 'לא הוגדר'}</div>` : ''}
+    ${d ? `<div class="small">${esc(d.name_he)} · מקסימום יומי של התרופה ${d.max_daily_dose_mg != null ? d.max_daily_dose_mg + ' מ"ג' : 'לא הוגדר'}</div>` : ''}
     ${others.length ? `<div class="note-box note-info"><span>התרופה כבר מופיעה באבחנות אחרות. להעתיק משם את המינון?</span>
       ${others.map(o => `<button class="btn" data-copy="${esc(o.id)}">${esc(indById(o.indication_id)?.name_he)}: ${rng(o.dose_min_mg_per_kg_day, o.dose_max_mg_per_kg_day)} · ${dosesText(o.doses_per_day)}${o.duration_days ? ` · ${o.duration_days} ימים` : ''}</button>`).join('')}
     </div>` : ''}
@@ -688,7 +696,8 @@ function secDose() {
     <div class="pair">
       <div class="field"><label for="ed-doses">מנות ביום *</label><input id="ed-doses" type="number" inputmode="numeric" dir="ltr" value="${esc(r.doses_per_day)}"></div>
       <div class="field"><label for="ed-days">משך (ימים)</label><input id="ed-days" type="number" inputmode="numeric" dir="ltr" value="${esc(r.duration_days)}"></div>
-    </div>`;
+    </div>
+    <div class="field"><label for="ed-maxd">מקסימום יומי לאבחנה הזו (מ"ג, לא חובה)</label><input id="ed-maxd" type="number" inputmode="decimal" dir="ltr" value="${esc(r.max_daily_dose_mg)}" placeholder="${d?.max_daily_dose_mg != null ? 'ריק = של התרופה: ' + d.max_daily_dose_mg : ''}"></div>`;
 }
 
 function secSyrups() {
@@ -720,6 +729,7 @@ function secSummary() {
       <dt>קו טיפול</dt><dd><span class="chip l-${r.treatment_line}">${LINES[r.treatment_line]}</span></dd>
       <dt>מינון</dt><dd>${rng(r.dose_min_mg_per_kg_day, r.dose_max_mg_per_kg_day)} מ"ג/ק"ג/יום</dd>
       <dt>מנות</dt><dd>${dosesText(r.doses_per_day)}${r.duration_days ? ` · ${r.duration_days} ימים` : ''}</dd>
+      <dt>מקסימום יומי</dt><dd>${effMax(r) != null ? `${effMax(r)} מ"ג${r.max_daily_dose_mg !== '' ? ' (לאבחנה הזו)' : ' (של התרופה)'}` : 'לא הוגדר'}</dd>
       <dt>סירופים</dt><dd>${prodsOf(r.drug_id).map(p => esc(p.brand_name)).join(' · ') || '—'}</dd>
       ${r.source ? `<dt>מקור</dt><dd>${esc(r.source)}</dd>` : ''}
     </dl>`;
@@ -768,7 +778,7 @@ function bindEditor() {
     const o = S.recs.find(x => x.id === b.dataset.copy);
     Object.assign(r, {
       dose_min_mg_per_kg_day: o.dose_min_mg_per_kg_day, dose_max_mg_per_kg_day: o.dose_max_mg_per_kg_day ?? '',
-      doses_per_day: o.doses_per_day, duration_days: o.duration_days ?? '',
+      doses_per_day: o.doses_per_day, duration_days: o.duration_days ?? '', max_daily_dose_mg: o.max_daily_dose_mg ?? '',
     });
     toast('המינון הועתק — אפשר לשנות'); render();
   });
@@ -778,7 +788,7 @@ function bindEditor() {
   });
   const bindField = (id, key) => { const el = $('#' + id); if (el) el.addEventListener('input', () => { r[key] = el.value; refreshPreview(); }); };
   bindField('ed-min', 'dose_min_mg_per_kg_day'); bindField('ed-max', 'dose_max_mg_per_kg_day');
-  bindField('ed-doses', 'doses_per_day'); bindField('ed-days', 'duration_days');
+  bindField('ed-doses', 'doses_per_day'); bindField('ed-days', 'duration_days'); bindField('ed-maxd', 'max_daily_dose_mg');
   bindField('ed-dnote', 'doctor_note'); bindField('ed-pnote', 'parent_note'); bindField('ed-src', 'source');
   const w = $('#ed-w'); if (w) w.addEventListener('input', () => { E.weight = w.value; refreshPreview(); });
   // Section 3: syrups (sheets keep the editor state; re-render afterwards)
@@ -803,6 +813,7 @@ async function saveEditor(status) {
     indication_id: r.indication_id, drug_id: r.drug_id, treatment_line: r.treatment_line,
     dose_min_mg_per_kg_day: +r.dose_min_mg_per_kg_day, dose_max_mg_per_kg_day: numOrNull(r.dose_max_mg_per_kg_day),
     doses_per_day: +r.doses_per_day, duration_days: numOrNull(r.duration_days),
+    max_daily_dose_mg: numOrNull(r.max_daily_dose_mg),
     doctor_note: r.doctor_note.trim() || null, parent_note: r.parent_note.trim() || null, source: r.source.trim() || null,
     sort_order: r.sort_order, status,
   };

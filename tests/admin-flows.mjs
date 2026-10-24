@@ -98,8 +98,14 @@ await p.click('#ed-min'); await p.keyboard.type('800'); await p.keyboard.press('
 await p.keyboard.press('Enter'); await p.keyboard.type('2'); 
 console.log('PREVIEW desk 800:', await txt(p,'#ed-pv'));
 await p.click('#save-ok'); console.log('verify sheet desk:', await txt(p,'.sheet'));
-await p.click('[data-close].btn'); await p.fill('#ed-min','80'); await p.click('#save-draft'); await p.waitForTimeout(300);
-console.log('desk saved:', db.recommendations.length);
+await p.click('[data-close].btn'); await p.fill('#ed-min','80');
+// Per-diagnosis daily max overrides the drug's (4000): 20 kg × 80 = 1600 > 1000
+await p.fill('#ed-maxd','1000'); const pvMax = await txt(p,'#ed-pv'); console.log('PREVIEW desk own max 1000:', pvMax);
+if (!pvMax.includes('המקסימום 1000')) errs.push('per-diagnosis max not used in preview');
+await p.click('#save-draft'); await p.waitForTimeout(300);
+const savedMax = db.recommendations[db.recommendations.length-1].max_daily_dose_mg;
+console.log('desk saved:', db.recommendations.length, 'own max:', savedMax);
+if (savedMax !== 1000) errs.push('per-diagnosis max not saved: '+savedMax);
 // calculator still OK
 const c = await ctx.newPage(); c.on('pageerror',e=>errs.push('calc '+e.message));
 await c.goto('https://tinydose.test/calculator.html'); await c.waitForSelector('#ff-weight');
