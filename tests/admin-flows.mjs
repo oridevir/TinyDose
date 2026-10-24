@@ -109,7 +109,7 @@ if (savedMax !== 1000) errs.push('per-diagnosis max not saved: '+savedMax);
 // calculator still OK
 const c = await ctx.newPage(); c.on('pageerror',e=>errs.push('calc '+e.message));
 await c.goto('https://tinydose.test/calculator.html'); await c.waitForSelector('#ff-weight');
-await c.fill('#ff-weight','10'); await c.fill('#ff-dose-min','50'); await c.fill('#ff-doses','2'); await c.fill('#ff-conc-mg','250'); await c.fill('#ff-conc-ml','5'); await c.waitForTimeout(300);
+await c.fill('#ff-weight','10'); await c.fill('#ff-dose-min','50'); await c.fill('#ff-doses','2'); await c.fill('#ff-days','7'); await c.fill('#ff-conc-mg','250'); await c.fill('#ff-conc-ml','5'); await c.waitForTimeout(300);
 console.log('calc:', await c.textContent('#ff-live-vol'));
 // old admin backup loads
 const o = await ctx.newPage(); o.on('pageerror',e=>errs.push('old '+e.message)); await o.goto('https://tinydose.test/admin-old.html'); await o.waitForSelector('#admin-app:not(.hidden)'); console.log('old admin ok:', await o.title());

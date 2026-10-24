@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261025b">
+  <link rel="stylesheet" href="style.css?v=20261025c">
   <script src="config.js?v=20261024a"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 </head>
@@ -548,8 +548,12 @@ function renderFreeForm() {
         <p class="ff-hint">מינון קבוע ולא טווח? השאר את השדה השני ריק</p>
       </div>
       <div class="ff-pill ff-yellow">
-        <label for="ff-doses">מספר מנות ביום *</label>
-        <div class="ff-pair"><input type="number" id="ff-doses" min="1" max="6" step="1" inputmode="numeric"><span>מנות</span></div>
+        <div class="ff-twin">
+          <div><label for="ff-doses">מספר מנות ביום *</label>
+            <div class="ff-pair"><input type="number" id="ff-doses" min="1" max="6" step="1" inputmode="numeric"><span>מנות</span></div></div>
+          <div><label for="ff-days">משך הטיפול *</label>
+            <div class="ff-pair"><input type="number" id="ff-days" min="1" max="90" step="1" inputmode="numeric"><span>ימים</span></div></div>
+        </div>
       </div>
       <div class="ff-pill ff-green">
         <label for="ff-conc-mg">ריכוז הסירופ *</label>
@@ -566,6 +570,7 @@ function renderFreeForm() {
         <div class="ff-pair"><input type="number" id="ff-maxdaily" min="0" step="any" inputmode="decimal"><span>מ"ג</span></div>
       </div>
 
+      <div class="ff-dnote" id="ff-dnote" hidden></div>
       <div class="ff-bubble">
         <div class="ff-bubble-text">
           <small>לתת בכל פעם</small>
@@ -663,7 +668,7 @@ function renderFreeForm() {
       concMg: parseFloat(concMgInput.value),
       concMl: parseFloat(concMlInput.value),
       maxDailyDoseMg: maxDailyRaw ? parseFloat(maxDailyRaw) : null,
-      durationDays: pick && parseInt($('dbp-days').value) > 0 ? parseInt($('dbp-days').value) : null,
+      durationDays: parseFloat($('ff-days').value),
     };
   }
 
@@ -672,7 +677,7 @@ function renderFreeForm() {
   let pick = null;   // { rec, drug, indication, products, product, parentNotePending }
   const ffEl = () => document.querySelector('.ff');
   const refresh = () => ffEl().dispatchEvent(new Event('input', { bubbles: true }));
-  const PICK_FIELDS = ['ff-drug', 'ff-diagnosis', 'ff-dose-min', 'ff-dose-max', 'ff-doses', 'ff-conc-mg', 'ff-conc-ml', 'ff-maxdaily'];
+  const PICK_FIELDS = ['ff-drug', 'ff-diagnosis', 'ff-dose-min', 'ff-dose-max', 'ff-doses', 'ff-days', 'ff-conc-mg', 'ff-conc-ml', 'ff-maxdaily'];
   const LINE_HE = { first: 'קו ראשון', alternative: 'חלופה', allergy: 'אלרגיה לפניצילין' };
 
   function setProduct(prod) {
@@ -692,16 +697,18 @@ function renderFreeForm() {
     $('ff-dose-min').value = rec.dose_min_mg_per_kg_day;
     if (rec.dose_max_mg_per_kg_day != null && +rec.dose_max_mg_per_kg_day !== +rec.dose_min_mg_per_kg_day) $('ff-dose-max').value = rec.dose_max_mg_per_kg_day;
     $('ff-doses').value = rec.doses_per_day;
+    if (rec.duration_days) $('ff-days').value = rec.duration_days;
+    // The doctor's note sits right above the result, where the dose is read
+    $('ff-dnote').innerHTML = rec.doctor_note ? `🩺 <strong>הערה לרופא:</strong> ${esc(isolateLtr(rec.doctor_note))}` : '';
+    $('ff-dnote').hidden = !rec.doctor_note;
     if (p.maxDailyDoseMg != null) $('ff-maxdaily').value = p.maxDailyDoseMg;
     setProduct(p.product);
     const box = $('dbp-picked');
     box.innerHTML = `
       <div class="dbp-picked-head"><span>📚 מהמאגר: <strong>${esc(isolateLtr(drug.name_he))}</strong> · ${esc(isolateLtr(indication.name_he))} · ${LINE_HE[rec.treatment_line] || ''}${rec.status === 'draft' ? ' <span class="dbp-draft">טיוטה</span>' : ''}</span>
         <button type="button" class="dbp-clear" id="dbp-clear">✕ ניקוי</button></div>
-      ${rec.doctor_note ? `<div class="dbp-dnote">🩺 ${esc(isolateLtr(rec.doctor_note))}</div>` : ''}
       ${products.length > 1 ? `<div class="dbp-chips" role="group" aria-label="סירופ">${products.map(pr => `<button type="button" data-prod="${esc(pr.id)}" aria-pressed="${pr === p.product}">${esc(isolateLtr(pr.brand_name))} <span dir="ltr">${pr.conc_mg}/${pr.conc_ml}</span></button>`).join('')}</div>` : ''}
       ${products.length ? '' : '<div class="dbp-warn">⚠️ אין סירופ במאגר לתרופה הזו — יש להקליד את הריכוז.</div>'}
-      <label class="dbp-days">משך הטיפול <input type="number" id="dbp-days" min="1" step="1" inputmode="numeric" value="${rec.duration_days ?? ''}"> ימים</label>
       ${rec.source ? `<div class="dbp-src">מקור: ${esc(isolateLtr(rec.source))}</div>` : ''}`;
     box.hidden = false;
     $('dbp-clear').onclick = clearPick;
@@ -722,6 +729,8 @@ function renderFreeForm() {
     if (notes) notes.value = '';
     $('dbp-picked').hidden = true;
     $('dbp-picked').innerHTML = '';
+    $('ff-dnote').hidden = true;
+    $('ff-dnote').innerHTML = '';
     refresh();
   }
 
@@ -737,7 +746,7 @@ function renderFreeForm() {
     const volEl = $('ff-live-vol'), subEl = $('ff-live-sub');
     concResult();
 
-    const ready = f.weight > 0 && f.doseMin > 0 && f.dosesPerDay > 0 && f.concMg > 0 && f.concMl > 0;
+    const ready = f.weight > 0 && f.doseMin > 0 && f.dosesPerDay > 0 && f.durationDays > 0 && f.concMg > 0 && f.concMl > 0;
     if (!ready) {
       volEl.textContent = '—'; volEl.classList.remove('is-range');
       subEl.textContent = 'מלא את השדות המסומנים ב-*';
@@ -751,6 +760,14 @@ function renderFreeForm() {
       subEl.textContent = 'מספר המנות ביום חייב להיות מספר שלם';
       drawCup(null);
       showResultPlaceholder('מספר המנות ביום חייב להיות מספר שלם (1, 2, 3...). יש לתקן את השדה.');
+      hideRounding();
+      return;
+    }
+    if (!Number.isInteger(f.durationDays)) {
+      volEl.textContent = '—'; volEl.classList.remove('is-range');
+      subEl.textContent = 'משך הטיפול חייב להיות מספר ימים שלם';
+      drawCup(null);
+      showResultPlaceholder('משך הטיפול חייב להיות מספר ימים שלם (5, 7, 10...). יש לתקן את השדה.');
       hideRounding();
       return;
     }
@@ -790,7 +807,7 @@ function renderFreeForm() {
       volEl.dataset.last = volEl.textContent;
       volEl.classList.remove('pop'); void volEl.offsetWidth; volEl.classList.add('pop');
     }
-    subEl.textContent = `${freqStr} · ${range(pMin, pMax)} מ"ג למנה${calc.capped ? ' · ⚠️ הוגבל למקסימום היומי' : ''}`;
+    subEl.textContent = `${freqStr} · למשך ${f.durationDays} ימים · ${range(pMin, pMax)} מ"ג למנה${calc.capped ? ' · ⚠️ הוגבל למקסימום היומי' : ''}`;
     $('ff-live-tag').hidden = !rounding;
     $('ff-live-tag').textContent = rounding
       ? `מעוגל ל־${STEP_LABEL[roundState.step]} · מדויק: ${range(calc.volMin, calc.volMax)} מ"ל` : '';

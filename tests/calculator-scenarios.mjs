@@ -18,7 +18,8 @@ const pick = a => a[Math.floor(rnd() * a.length)];
 
 // ── scenarios ──
 const S = [];
-const add = (name, o) => S.push({ name, ...o });
+// d = days of treatment (required field); default 7 unless the scenario sets it
+const add = (name, o) => S.push({ name, d: 7, ...o });
 // realistic paediatric syrups
 const CONCS = [[120, 5], [125, 5], [250, 5], [200, 5], [100, 5], [40, 1], [100, 1], [400, 5], [600, 5], [228, 5], [312.5, 5], [156.25, 5], [457, 5], [62.5, 5], [5, 5], [1, 1], [50, 3], [100, 3], [10, 7]];
 const DOSES = [[10, null], [15, null], [10, 15], [20, 40], [25, 50], [30, null], [40, 50], [45, null], [50, null], [50, 75], [80, 90], [90, null], [5, 10], [0.5, 1], [7.5, 10], [12.5, null], [33.3, null]];
@@ -27,7 +28,7 @@ for (let i = 0; i < +(process.env.N || 260); i++) {
   const [cmg, cml] = pick(CONCS), [dmin, dmax] = pick(DOSES), w = pick(WEIGHTS), n = pick([1, 2, 2, 3, 3, 4, 6]);
   const daily = (dmax ?? dmin) * w;
   const max = pick([null, null, Math.round(daily * 0.5), Math.round(daily * 0.9), Math.round(daily), Math.round(daily * 1.1), 4000, 1000, 500]);
-  add(`rand#${i}`, { w, dmin, dmax, n, cmg, cml, max });
+  add(`rand#${i}`, { w, dmin, dmax, n, cmg, cml, max, d: pick([3, 5, 7, 7, 10, 14]) });
 }
 // targeted edge cases
 add('upper-only over max', { w: 9, dmin: 50, dmax: 75, n: 2, cmg: 250, cml: 5, max: 600 });
@@ -56,6 +57,10 @@ add('odd conc 100/3', { w: 10, dmin: 40, dmax: null, n: 3, cmg: 100, cml: 3, max
 add('odd conc 10/7', { w: 7, dmin: 3, dmax: null, n: 2, cmg: 10, cml: 7, max: null });
 add('very small vol', { w: 3, dmin: 0.5, dmax: null, n: 2, cmg: 400, cml: 5, max: null });
 add('very large vol', { w: 40, dmin: 90, dmax: null, n: 2, cmg: 125, cml: 5, max: null });
+add('days empty', { w: 10, dmin: 40, dmax: null, n: 2, cmg: 250, cml: 5, max: null, d: null, expect: 'not-ready' });
+add('days 0', { w: 10, dmin: 40, dmax: null, n: 2, cmg: 250, cml: 5, max: null, d: 0, expect: 'not-ready' });
+add('days 2.5', { w: 10, dmin: 40, dmax: null, n: 2, cmg: 250, cml: 5, max: null, d: 2.5, expect: 'invalid-range' });
+add('days 1', { w: 10, dmin: 40, dmax: null, n: 2, cmg: 250, cml: 5, max: null, d: 1 });
 add('huge numbers', { w: 40, dmin: 100000, dmax: null, n: 2, cmg: 1, cml: 1, max: null });
 add('decimals everywhere', { w: 7.35, dmin: 13.7, dmax: 27.45, n: 3, cmg: 187.5, cml: 5, max: 333.3 });
 add('max with decimals equal', { w: 10, dmin: 33.33, dmax: null, n: 1, cmg: 250, cml: 5, max: 333.3 });
@@ -63,9 +68,9 @@ add('max with decimals equal', { w: 10, dmin: 33.33, dmax: null, n: 1, cmg: 250,
 // ── independent oracle ──
 function expected(s0) {
   const s = { ...s0, n: Number(s0.n) };
-  const ready = s.w > 0 && s.dmin > 0 && s.n > 0 && s.cmg > 0 && s.cml > 0;
+  const ready = s.w > 0 && s.dmin > 0 && s.n > 0 && s.d > 0 && s.cmg > 0 && s.cml > 0;
   if (!ready) return { kind: 'not-ready' };
-  if (!Number.isInteger(s.n)) return { kind: 'invalid-range' };
+  if (!Number.isInteger(s.n) || !Number.isInteger(s.d)) return { kind: 'invalid-range' };
   if (s.dmax != null && s.dmax < s.dmin) return { kind: 'invalid-range' };
   const conc = s.cmg / s.cml;
   const lo = s.dmin * s.w, hiRaw = (s.dmax ?? s.dmin) * s.w;
@@ -99,7 +104,7 @@ async function setForm(s) {
   await p.evaluate(s => {
     const set = (id, v) => { const el = document.getElementById(id); el.value = v == null ? '' : String(v); el.dispatchEvent(new Event('input', { bubbles: true })); };
     set('ff-drug', 'תרופת בדיקה'); set('ff-weight', s.w); set('ff-dose-min', s.dmin); set('ff-dose-max', s.dmax);
-    set('ff-doses', s.n); set('ff-conc-mg', s.cmg); set('ff-conc-ml', s.cml); set('ff-maxdaily', s.max);
+    set('ff-doses', s.n); set('ff-days', s.d === undefined ? 7 : s.d); set('ff-conc-mg', s.cmg); set('ff-conc-ml', s.cml); set('ff-maxdaily', s.max);
   }, s);
 }
 const read = () => p.evaluate(() => ({
@@ -112,7 +117,7 @@ const read = () => p.evaluate(() => ({
 }));
 
 const failures = [];
-const fail = (s, msg) => failures.push(`${s.name} ${JSON.stringify({ w: s.w, dose: [s.dmin, s.dmax], n: s.n, conc: [s.cmg, s.cml], max: s.max })}\n    → ${msg}`);
+const fail = (s, msg) => failures.push(`${s.name} ${JSON.stringify({ w: s.w, dose: [s.dmin, s.dmax], n: s.n, days: s.d, conc: [s.cmg, s.cml], max: s.max })}\n    → ${msg}`);
 let printChecks = 0, shareChecks = 0, roundChecks = 0;
 
 for (const [idx, s] of S.entries()) {
@@ -147,6 +152,8 @@ for (const [idx, s] of S.entries()) {
   if (e.capped !== /הוגבל/.test(r.sub)) fail(s, `capped=${e.capped} but bubble note ${/הוגבל/.test(r.sub) ? 'present' : 'missing'}`);
   if (e.capped && !/הגבלה למקסימום/.test(r.details)) fail(s, 'capped but no cap step in details');
   if (r.roundHidden) fail(s, 'rounding panel hidden on a valid result');
+  if (!clean(r.sub).includes(`למשך ${s.d} ימים`)) fail(s, `bubble does not show the days: "${r.sub}"`);
+  if (!clean(r.details).includes(`למשך ${s.d} ימים`)) fail(s, 'details summary does not show the days');
 
   // share text (every 3rd)
   if (idx % 3 === 0) {
@@ -158,6 +165,7 @@ for (const [idx, s] of S.entries()) {
       const m = clean(t).match(/לתת\s+([\d.]+)(?:–([\d.]+))?\s*מ"ל/);
       if (!m || +m[1] !== v[0] || +(m[2] ?? m[1]) !== v[1]) fail(s, `share volume "${m?.[0]}" differs from bubble ${v.join('–')}`);
       for (const bad of ['NaN', 'undefined', 'null']) if (t.includes(bad)) fail(s, `share contains ${bad}`);
+      if (!clean(t).includes(`למשך ${s.d} ימים`)) fail(s, 'share text does not show the days');
       const brs = badRanges(t); if (brs.length) fail(s, `share range without isolation: ${brs}`);
     }
   }
@@ -170,6 +178,7 @@ for (const [idx, s] of S.entries()) {
     const m = clean(pt).match(/([\d.]+)(?:–([\d.]+))?\s*מ"ל/);
     if (!m || +m[1] !== v[0] || +(m[2] ?? m[1]) !== v[1]) fail(s, `print first volume "${m?.[0]}" differs from bubble ${v.join('–')}`);
     for (const bad of ['NaN', 'undefined', 'null']) if (pt.includes(bad)) fail(s, `print contains ${bad}`);
+    if (!clean(pt).includes(`למשך ${s.d} ימים`)) fail(s, 'print does not show the days');
     await pw.close();
   }
   // rounding (every 4th): try down and up with ½ ml

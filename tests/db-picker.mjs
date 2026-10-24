@@ -106,17 +106,22 @@ check(await val(p, 'ff-doses') === '2', 'doses per day filled');
 check(await val(p, 'ff-conc-mg') === '250' && await val(p, 'ff-conc-ml') === '5', 'concentration filled from syrup');
 check(await val(p, 'ff-maxdaily') === '3000', 'per-diagnosis max (3000) used, not the drug max (4000)');
 check(await val(p, 'ff-weight') === '', 'weight NOT filled');
-check(await val(p, 'dbp-days') === '5', 'duration shown in the database panel');
+check(await val(p, 'ff-days') === '5', 'days of treatment filled');
+const noteAbove = await p.evaluate(() => { const n = document.getElementById('ff-dnote'), bub = document.querySelector('.ff-bubble');
+  return !n.hidden && getComputedStyle(n).display !== 'none' && n.nextElementSibling === bub && n.textContent.includes('משך לפי'); });
+check(noteAbove, "doctor's note shown right above the result");
+check(!(await txt(p, '#dbp-picked')).includes('משך לפי'), "doctor's note not repeated in the top panel");
 check((await txt(p, '#ff-live-vol')) === '—', 'no result before a weight is entered');
 await p.fill('#ff-weight', '10'); await p.waitForTimeout(150);
 check((await txt(p, '#ff-live-vol')).replace(/[⁦⁩]/g, '') === '6–9 מ"ל', `bubble = 6–9 ml for 10 kg (${await txt(p, '#ff-live-vol')})`);
 const rawT = await rawShare(p);
 check(rawT && rawT.includes('(מוקסיפן \u2066250\u2069)'), 'WhatsApp: numbers inside Hebrew text are LTR-isolated');
-const card = await p.evaluate(() => document.querySelector('#dbp-picked .dbp-dnote').textContent);
+const card = await p.evaluate(() => document.getElementById('ff-dnote').textContent);
 check(card.includes('\u2066DAG\u2069: \u20665–10\u2069'), 'doctor note: "DAG: 5–10" → DAG, colon, 5–10 in Hebrew reading order');
 let t = await share(p);
 check(t && t.includes('למשך 5 ימים') && t.includes('אמוקסיצילין (מוקסיפן 250)') && t.includes('אוטיטיס מדיה'), 'WhatsApp text has drug, diagnosis and duration');
-await p.fill('#dbp-days', '7'); await p.waitForTimeout(150);
+await p.fill('#ff-days', '7'); await p.waitForTimeout(150);
+check((await txt(p, '#ff-live-sub')).includes('למשך 7 ימים'), 'days shown inside the result bubble');
 t = await share(p); check(t && t.includes('למשך 7 ימים'), 'edited duration flows to WhatsApp');
 await p.fill('#ff-weight', '40'); await p.waitForTimeout(150);
 check((await txt(p, '#ff-live-sub')).includes('הוגבל'), '40 kg: range capped at the per-diagnosis max');
@@ -155,7 +160,8 @@ check((await txt(p, '#ff-live-vol')).length > 1 && !(await txt(p, '#ff-live-vol'
 
 // 7. Clear, reset, close
 await p.click('#dbp-clear'); await p.waitForTimeout(100);
-check(await p.$eval('#dbp-picked', e => e.hidden) && await val(p, 'ff-drug') === '' && await val(p, 'ff-dose-min') === '', '"ניקוי" empties the filled fields and the panel');
+check(await p.$eval('#dbp-picked', e => e.hidden) && await val(p, 'ff-drug') === '' && await val(p, 'ff-dose-min') === '' && await val(p, 'ff-days') === '', '"ניקוי" empties the filled fields and the panel');
+check(await p.$eval('#ff-dnote', e => getComputedStyle(e).display === 'none'), '"ניקוי" removes the doctor\'s note');
 await p.click('#dbp-open'); await p.click('[data-cat="c1"]'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r1"]'); await p.click('#dbp-ok');
 await p.click('#reset-btn'); await p.waitForTimeout(150);
 check(!(await p.$('#dbp-picked:not([hidden])')) && await val(p, 'ff-dose-min') === '', 'איפוס clears the database choice too');

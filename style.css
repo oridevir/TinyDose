@@ -757,6 +757,15 @@ body.sky-wind .sky-layer { animation: none; }
 
 .ff-pill { border-radius: 26px; padding: 12px 18px 14px; display: flex; flex-direction: column; gap: 8px; text-align: center; }
 .ff-pill > label { font-size: 0.9rem; color: #4a5680; }
+/* Doses per day + days of treatment side by side in the yellow bubble */
+.ff-twin { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ff-twin > div { display: flex; flex-direction: column; gap: 8px; }
+.ff-twin label { font-size: 0.9rem; color: #4a5680; }
+.ff-twin .ff-pair { gap: 6px; }
+.ff-twin .ff-pair input { width: 70px; }
+/* The doctor's note from the database, right above the result */
+.ff-dnote { background: #fff; border: 2.5px solid #bfe0fb; border-radius: 22px; padding: 10px 14px; font-size: .9rem; line-height: 1.55; text-align: right; }
+.ff-dnote[hidden] { display: none; }
 .ff-peach { background: #ffe6dc; }
 .ff-yellow { background: #fff1c2; }
 .ff-green { background: #dcf5e4; }
@@ -858,8 +867,6 @@ body.sky-wind .sky-layer { animation: none; }
 .dbp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .dbp-chips button { border: 2px solid #dcf5e4; background: #fff; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .88rem; cursor: pointer; color: inherit; }
 .dbp-chips button[aria-pressed="true"] { background: #dcf5e4; border-color: #4caf7a; font-weight: 700; }
-.dbp-days { display: flex; align-items: center; gap: 8px; }
-.ff .dbp-days input { width: 70px; border: 2px solid #e2e8f0; border-radius: 999px; padding: 5px 8px; font-size: 1rem; }
 .dbp-src { font-size: .8rem; color: #6b7bb3; }
 .dbp-draft { display: inline-block; background: #fff1c2; color: #8a6100; border-radius: 999px; padding: 1px 8px; font-size: .78rem; font-weight: 700; }
 .dbp-dnote { background: #f3f8ff; border-radius: 12px; padding: 8px 10px; font-size: .88rem; line-height: 1.5; white-space: pre-line; }
