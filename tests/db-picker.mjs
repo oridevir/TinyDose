@@ -62,7 +62,6 @@ const share = async p => (await rawShare(p))?.replace(ISO, '');
 // 1. Switch off (default): no button, nothing read from Supabase
 let p = await page('https://tinydose.test/calculator.html');
 check(!(await p.$('#dbp-open')), 'switch off: no "בחירה מהמאגר" button');
-check(!(await p.$('.wind-toggle')), 'switch off: no clouds button');
 check(!(await p.$('.ff-calc-title')), 'live page: no calculation title (experiment only)');
 
 // 2. Preview with ?db=1
@@ -180,21 +179,8 @@ check(kb.b <= kb.h, `search: first result visible above the keyboard (${JSON.str
 // Experiment page: title right above the calculation details; clouds button in the footer
 p = await page('https://tinydose.test/calculator.html?db=1');
 check(await p.evaluate(() => { const t = document.querySelector('.ff-calc-title'); return !!t && t.nextElementSibling?.id === 'result-area' && t.textContent.includes('פירוט חישוב המינון'); }), 'experiment page: "פירוט חישוב המינון" title above the details');
-check(await p.evaluate(() => !!document.querySelector('footer .wind-toggle')), 'clouds button sits in the footer (does not cover the reset button)');
 
-// 9. Wind (experiment): clouds drift right, near layer faster than far; off stops them
-p = await page('https://tinydose.test/calculator.html?db=1');
-const xs = () => p.$$eval('.sky-layer', els => els.map(e => parseFloat(getComputedStyle(e).backgroundPositionX)));
-const x0 = await xs();
-await p.click('.wind-toggle'); await p.waitForTimeout(1500);
-const x1 = await xs();
-const moved = x1.map((v, i) => v - x0[i]);   // far, mid, near
-check(moved.every(m => m > 0) && moved[0] < moved[1] && moved[1] < moved[2], `wind: all layers move right, near fastest (${moved.map(m => m.toFixed(1)).join(' / ')} px)`);
-check(await p.$eval('.wind-toggle', e => e.getAttribute('aria-pressed')) === 'true', 'wind button shows "on"');
-await p.click('.wind-toggle'); const x2 = await xs(); await p.waitForTimeout(600); const x3 = await xs();
-check(x3.every((v, i) => v === x2[i]), 'wind off: clouds stop');
-
-// 10. Desktop layout
+// 9. Desktop layout
 p = await page('https://tinydose.test/calculator.html?db=1', { width: 1280, height: 900 });
 await p.click('#dbp-open'); await p.waitForSelector('.dbp-catcard');
 const box = await p.$eval('.dbp-sheet', e => e.getBoundingClientRect().width); check(box <= 560, `desktop: window width ${box}px`);

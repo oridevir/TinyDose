@@ -695,11 +695,6 @@ input[type=number] { direction: ltr; text-align: right; }
   .sky-near { animation: cloud-drift 36s ease-in-out infinite alternate; }
 }
 @keyframes cloud-drift { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
-/* Wind experiment (?db=1): the clouds drift right continuously (calculator.html,
-   startParallax.setWind) — the back-and-forth sway is paused meanwhile. */
-body.sky-wind .sky-layer { animation: none; }
-.wind-toggle { display: inline-block; margin: 6px 6px 0; border: 1.5px solid #c9dcf2; border-radius: 999px; padding: 6px 16px; background: rgba(255,255,255,.9); color: #1e2f6b; font: inherit; font-family: 'Varela Round', sans-serif; font-size: .85rem; cursor: pointer; }
-.wind-toggle[aria-pressed="true"] { background: #2b9df4; border-color: #2b9df4; color: #fff; }
 /* Experiment page: title above the calculation details */
 .ff-calc-title { margin: 22px 0 10px; text-align: center; font-family: 'Fredoka', 'Varela Round', sans-serif; font-weight: 700; font-size: 1.45rem; color: var(--pink, #ff5d93); }
 .ff-page .credit { background: transparent; color: var(--navy); font-family: 'Varela Round', sans-serif; padding-top: 0; }
