@@ -25,7 +25,7 @@ function freshDb(){ return {
 let db, n=0;
 async function mkCtx(b, vp){
   const ctx = await b.newContext({viewport:vp});
-  await ctx.route('https://tinydose.test/**', r=>{ const p=new URL(r.request().url()).pathname; const f=path.join(ROOT,p); if(!fs.existsSync(f)) return r.fulfill({status:404,body:''}); r.fulfill({status:200,contentType:MIME[path.extname(f)]||'application/octet-stream',body:fs.readFileSync(f)}); });
+  await ctx.route('https://tinydose.test/**', r=>{ const p=new URL(r.request().url()).pathname; const f=path.join(ROOT,p.endsWith('/')?p+'index.html':p); if(!fs.existsSync(f)) return r.fulfill({status:404,body:''}); r.fulfill({status:200,contentType:MIME[path.extname(f)]||'application/octet-stream',body:fs.readFileSync(f)}); });
   await ctx.route('https://cdn.jsdelivr.net/**', r=>r.fulfill({status:200,contentType:'text/javascript',body:'var self=globalThis;'+umd+'\nexport const createClient = supabase.createClient;'}));
   await ctx.route('https://fonts.googleapis.com/**', r=>r.fulfill({status:200,contentType:'text/css',body:''}));
   await ctx.route('https://orvizmgloskvqfsralxc.supabase.co/**', async route => {
@@ -108,7 +108,7 @@ console.log('desk saved:', db.recommendations.length, 'own max:', savedMax);
 if (savedMax !== 1000) errs.push('per-diagnosis max not saved: '+savedMax);
 // calculator still OK
 const c = await ctx.newPage(); c.on('pageerror',e=>errs.push('calc '+e.message));
-await c.goto('https://tinydose.test/calculator.html'); await c.waitForSelector('#ff-weight');
+await c.goto('https://tinydose.test/'); await c.waitForSelector('#ff-weight');
 await c.fill('#ff-weight','10'); await c.fill('#ff-dose-min','50'); await c.fill('#ff-doses','2'); await c.fill('#ff-days','7'); await c.fill('#ff-conc-mg','250'); await c.fill('#ff-conc-ml','5'); await c.waitForTimeout(300);
 console.log('calc:', await c.textContent('#ff-live-vol'));
 // old admin backup loads

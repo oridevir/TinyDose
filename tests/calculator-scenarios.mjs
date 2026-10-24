@@ -1,4 +1,4 @@
-// Scenario bench for calculator.html (free calculation): an independent oracle +
+// Scenario bench for the calculator (index.html) (free calculation): an independent oracle +
 // invariants, checked against the bubble, details, WhatsApp text, print and rounding.
 // Run:  node tests/calculator-scenarios.mjs        (SEED=… N=… for other random sets)
 // See tests/README.md.
@@ -92,13 +92,13 @@ function badRanges(raw) {
 
 const b = await chromium.launch();
 const ctx = await b.newContext({ viewport: { width: 430, height: 1200 } });
-await ctx.route('https://tinydose.test/**', r => { const p = new URL(r.request().url()).pathname; const f = path.join(ROOT, p); if (!fs.existsSync(f)) return r.fulfill({ status: 404, body: '' }); r.fulfill({ status: 200, contentType: MIME[path.extname(f)] || 'application/octet-stream', body: fs.readFileSync(f) }); });
+await ctx.route('https://tinydose.test/**', r => { const p = new URL(r.request().url()).pathname; const f = path.join(ROOT, p.endsWith('/') ? p + 'index.html' : p); if (!fs.existsSync(f)) return r.fulfill({ status: 404, body: '' }); r.fulfill({ status: 200, contentType: MIME[path.extname(f)] || 'application/octet-stream', body: fs.readFileSync(f) }); });
 await ctx.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ status: 200, contentType: 'text/javascript', body: 'export const createClient=()=>({});' }));
 await ctx.route('https://fonts.googleapis.com/**', r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
 await ctx.addInitScript(() => { navigator.share = async d => { window.__shared = d.text; }; });
 const p = await ctx.newPage();
 const pageErrors = []; p.on('pageerror', e => pageErrors.push(e.message));
-await p.goto('https://tinydose.test/calculator.html'); await p.waitForSelector('#ff-weight');
+await p.goto('https://tinydose.test/'); await p.waitForSelector('#ff-weight');
 
 async function setForm(s) {
   await p.evaluate(s => {

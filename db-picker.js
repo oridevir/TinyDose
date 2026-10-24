@@ -4,7 +4,7 @@
 // to the calculator, which fills its own fields; all math stays in calculateDose().
 // Visitors see verified options only (enforced in Supabase); a signed-in admin also
 // sees drafts, marked as such.
-import { supabase, esc, isolateLtr } from './app.js?v=20261024a';
+import { supabase, esc, isolateLtr } from './app.js?v=20261025a';
 // Text content from the database: escaped + mixed Hebrew/English kept in order
 const t = x => esc(isolateLtr(x));
 

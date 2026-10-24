@@ -1,7 +1,7 @@
 // admin.js — drug database admin, organised by diagnosis (see CLAUDE.md section 9)
 // Phone: the treatment-option editor is a step-by-step wizard.
 // Desktop (wide screen): the same editor is one page with a live preview column.
-import { supabase, calculateDose, round2, esc as escRaw, isolateLtr } from './app.js?v=20261024a';
+import { supabase, calculateDose, round2, esc as escRaw, isolateLtr } from './app.js?v=20261025a';
 // Text shown on screen: escaped, with mixed Hebrew/English kept in order (isolateLtr).
 // Attribute values and editable fields use escRaw, so ids and saved text stay untouched.
 const esc = x => escRaw(isolateLtr(x));
@@ -253,7 +253,7 @@ const openCats = new Set();
 
 function renderHome() {
   $('#screen').innerHTML = `
-    ${topBar('ניהול המאגר', 'TinyDose', { backBtn: false, extra: '<a class="linkbtn" href="calculator.html">למחשבון</a><button class="linkbtn" id="logout">יציאה</button>' })}
+    ${topBar('ניהול המאגר', 'TinyDose', { backBtn: false, extra: '<a class="linkbtn" href="./">למחשבון</a><button class="linkbtn" id="logout">יציאה</button>' })}
     <label class="search"><span aria-hidden="true">🔍</span>
       <input id="q" type="search" placeholder="חיפוש אבחנה, תרופה או שם מסחרי" aria-label="חיפוש" value="${escRaw(homeQuery)}">
     </label>
@@ -846,7 +846,7 @@ function renderLogin() {
       <div class="field"><label for="li-pass">סיסמה</label><input id="li-pass" type="password" dir="ltr" autocomplete="current-password"></div>
       <div class="err" id="li-err" hidden></div>
       <button class="btn primary big" id="li-btn">כניסה</button>
-      <a class="small" href="calculator.html" style="text-align:center">חזרה למחשבון</a>
+      <a class="small" href="./" style="text-align:center">חזרה למחשבון</a>
     </form>`;
   $('#login-form').onsubmit = async e => {
     e.preventDefault();

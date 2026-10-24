@@ -11,7 +11,7 @@ export function round2(n) {
 }
 
 export function goToCalculator(medId) {
-  location.href = `calculator.html?id=${medId}`;
+  location.href = `./?id=${medId}`;
 }
 
 // Escape HTML to prevent XSS when injecting DB content into innerHTML

@@ -1,4 +1,4 @@
-// "📚 בחירה מהמאגר" in the free calculation (db-picker.js + calculator.html), against an
+// "📚 בחירה מהמאגר" in the free calculation (db-picker.js + index.html), against an
 // in-memory mock of Supabase — the real database is never touched. Run:
 //   node tests/db-picker.mjs        (needs the local supabase-js copy, see tests/README.md)
 import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
@@ -63,22 +63,23 @@ const rawShare = async p => { await p.evaluate(() => { window.__shared = null; d
 const share = async p => (await rawShare(p))?.replace(ISO, '');
 
 // 1. Switch off: no button, nothing from the experiment
-let p = await page('https://tinydose.test/calculator.html', undefined, { pickerOff: true });
+let p = await page('https://tinydose.test/', undefined, { pickerOff: true });
 check(!(await p.$('#dbp-open')), 'switch off: no "בחירה מהמאגר" button');
 check(!(await p.$('.ff-calc-title')), 'switch off: no calculation title');
-// The address shows the site root, not /calculator.html; reloading it brings the calculator back
-p = await page('https://tinydose.test/calculator.html?db=1');
-check(await p.evaluate(() => location.pathname + location.search) === '/?db=1', 'address bar: tinydose.../ (no calculator.html), query kept');
+// The calculator IS the site root (index.html): the address never shows calculator.html
+p = await page('https://tinydose.test/');
+const visited = []; p.on('framenavigated', f => { if (f === p.mainFrame()) visited.push(new URL(f.url()).pathname); });
 await p.reload(); await p.waitForSelector('#ff-weight');
-check(await p.evaluate(() => location.pathname) === '/', 'reload of the plain address shows the calculator again');
-await p.goto('https://tinydose.test/'); await p.waitForSelector('#ff-weight');
-check(await p.evaluate(() => location.pathname) === '/', 'opening the plain address shows the calculator');
+check(visited.every(x => x === '/'), `site root: calculator served directly, never via calculator.html (${visited.join(', ')})`);
+// Old links to calculator.html still work and land on the root, keeping their parameters
+await p.goto('https://tinydose.test/calculator.html?db=1'); await p.waitForSelector('#ff-weight');
+check(await p.evaluate(() => location.pathname + location.search) === '/?db=1', 'old calculator.html link → site root, query kept');
 // Switch as set in config.js now (on since 2026-10-25): the button is there without ?db=1
-p = await page('https://tinydose.test/calculator.html');
+p = await page('https://tinydose.test/');
 check(!!(await p.$('#dbp-open')) === /window\.DB_PICKER = true;/.test(fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8')), 'live page follows the DB_PICKER switch in config.js');
 
 // 2. Preview with ?db=1
-p = await page('https://tinydose.test/calculator.html?db=1');
+p = await page('https://tinydose.test/?db=1');
 check(await p.$eval('#dbp-picked', e => getComputedStyle(e).display === 'none'), 'database panel really invisible before a choice');
 await p.evaluate(() => window.scrollTo(0, 0));
 await p.evaluate(() => document.getElementById('dbp-open').click());   // no auto-scroll, like a real tap
@@ -182,7 +183,7 @@ await p.click('#dbp-open'); await p.waitForSelector('.dbp-overlay:not([hidden]) 
 check(await p.$eval('.dbp-overlay', e => e.hidden), 'Escape closes the window');
 
 // 8. Phone keyboard: the window shrinks with the visible area, results stay above the keyboard
-p = await page('https://tinydose.test/calculator.html?db=1');
+p = await page('https://tinydose.test/?db=1');
 await p.click('#dbp-open'); await p.waitForSelector('.dbp-catcard');
 await p.setViewportSize({ width: 390, height: 420 });   // like a keyboard taking half the screen
 await p.fill('#dbp-q', 'אמוקס'); await p.waitForTimeout(200);
@@ -190,11 +191,11 @@ const kb = await p.evaluate(() => { const r = document.querySelector('#dbp-body 
 check(kb.b <= kb.h, `search: first result visible above the keyboard (${JSON.stringify(kb)})`);
 
 // Experiment page: title right above the calculation details; clouds button in the footer
-p = await page('https://tinydose.test/calculator.html?db=1');
+p = await page('https://tinydose.test/?db=1');
 check(await p.evaluate(() => { const t = document.querySelector('.ff-calc-title'); return !!t && t.nextElementSibling?.id === 'result-area' && t.textContent.includes('פירוט חישוב המינון'); }), 'experiment page: "פירוט חישוב המינון" title above the details');
 
 // 9. Desktop layout
-p = await page('https://tinydose.test/calculator.html?db=1', { width: 1280, height: 900 });
+p = await page('https://tinydose.test/?db=1', { width: 1280, height: 900 });
 await p.click('#dbp-open'); await p.waitForSelector('.dbp-catcard');
 const box = await p.$eval('.dbp-sheet', e => e.getBoundingClientRect().width); check(box <= 560, `desktop: window width ${box}px`);
 
