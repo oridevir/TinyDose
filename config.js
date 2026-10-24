@@ -24,4 +24,4 @@ if (!window.SHOW_DEV_BANNER) {
 // browse the drug database and fill the calculation fields from a chosen option.
 // false: hidden. A preview is still possible with ?db=1 in the address.
 // Visitors see verified options only (Supabase rule); a signed-in admin also sees drafts.
-window.DB_PICKER = false;
+window.DB_PICKER = true;

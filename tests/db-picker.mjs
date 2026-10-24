@@ -37,9 +37,12 @@ const db = {
 
 const b = await chromium.launch(); const errs = []; const fails = [];
 const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? 'ok   ' : 'FAIL ') + msg); };
-async function page(url, vp = { width: 390, height: 844 }) {
+async function page(url, vp = { width: 390, height: 844 }, { pickerOff = false } = {}) {
   const ctx = await b.newContext({ viewport: vp });
   await ctx.route('https://tinydose.test/**', r => { const p = new URL(r.request().url()).pathname; const f = path.join(ROOT, p); if (!fs.existsSync(f)) return r.fulfill({ status: 404, body: '' }); r.fulfill({ status: 200, contentType: MIME[path.extname(f)] || 'application/octet-stream', body: fs.readFileSync(f) }); });
+  // pickerOff: serve config.js with DB_PICKER = false, to test the switch whatever its current value
+  if (pickerOff) await ctx.route('https://tinydose.test/config.js*', r => r.fulfill({ status: 200, contentType: 'text/javascript',
+    body: fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8').replace(/window\.DB_PICKER = (true|false);/, 'window.DB_PICKER = false;') }));
   await ctx.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ status: 200, contentType: 'text/javascript', body: 'var self=globalThis;' + umd + '\nexport const createClient = supabase.createClient;' }));
   await ctx.route('https://fonts.googleapis.com/**', r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   await ctx.route('https://orvizmgloskvqfsralxc.supabase.co/**', route => {
@@ -59,10 +62,13 @@ const txt = async (p, sel) => ((await p.textContent(sel)) || '').replace(ISO, ''
 const rawShare = async p => { await p.evaluate(() => { window.__shared = null; document.getElementById('share-btn').click(); }); return p.evaluate(() => window.__shared); };
 const share = async p => (await rawShare(p))?.replace(ISO, '');
 
-// 1. Switch off (default): no button, nothing read from Supabase
-let p = await page('https://tinydose.test/calculator.html');
+// 1. Switch off: no button, nothing from the experiment
+let p = await page('https://tinydose.test/calculator.html', undefined, { pickerOff: true });
 check(!(await p.$('#dbp-open')), 'switch off: no "בחירה מהמאגר" button');
-check(!(await p.$('.ff-calc-title')), 'live page: no calculation title (experiment only)');
+check(!(await p.$('.ff-calc-title')), 'switch off: no calculation title');
+// Switch as set in config.js now (on since 2026-10-25): the button is there without ?db=1
+p = await page('https://tinydose.test/calculator.html');
+check(!!(await p.$('#dbp-open')) === /window\.DB_PICKER = true;/.test(fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8')), 'live page follows the DB_PICKER switch in config.js');
 
 // 2. Preview with ?db=1
 p = await page('https://tinydose.test/calculator.html?db=1');
