@@ -91,3 +91,31 @@ export function calculateDose({
 
   return { hasRange, dailyMin, dailyMax, uncappedDailyMax, capped, exceeded: false, perDoseMin, perDoseMax, volMin, volMax };
 }
+
+/**
+ * Mixed Hebrew/English text: wrap every left-to-right run (Latin words and
+ * phrases, numbers, ranges, "ES (14:1)", "eGFR<15", "max 3000 mg") in an LTR
+ * isolate, so an RTL page shows it in the right order — without it punctuation
+ * and numbers jump around. Sentence punctuation (": " ", " ". ") ends a run and
+ * stays in the Hebrew flow, so "DAG: 5–10" reads DAG, colon, 5–10 from the right.
+ * Unmatched brackets stay outside too. Safe to call again on its own output.
+ */
+export function isolateLtr(str) {
+  if (str == null) return str;
+  const s = String(str).replace(/[⁦-⁩]/g, '');
+  const starts = /[A-Za-z0-9]/, inRun = /[A-Za-z0-9 .,:;/%+\-–<>=()'*]/;
+  let out = '', i = 0;
+  while (i < s.length) {
+    if (!starts.test(s[i])) { out += s[i++]; continue; }
+    let j = i, depth = 0;
+    for (; j < s.length && inRun.test(s[j]); j++) {
+      if (s[j] === '(') depth++;
+      else if (s[j] === ')') { if (!depth) break; depth--; }   // a ")" opened in the Hebrew text ends the run
+      else if (':;,.'.includes(s[j]) && (j + 1 === s.length || /\s/.test(s[j + 1]))) break;   // sentence punctuation
+    }
+    const run = s.slice(i, j).replace(/[\s.,:;\-–(]+$/, '');
+    out += `⁦${run}⁩`;
+    i += run.length;
+  }
+  return out;
+}

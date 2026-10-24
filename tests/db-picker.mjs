@@ -53,8 +53,11 @@ async function page(url, vp = { width: 390, height: 844 }) {
   return p;
 }
 const val = (p, id) => p.inputValue('#' + id);
-const txt = async (p, sel) => ((await p.textContent(sel)) || '').replace(/\s+/g, ' ').trim();
-const share = async p => { await p.evaluate(() => { window.__shared = null; document.getElementById('share-btn').click(); }); return p.evaluate(() => window.__shared); };
+// Comparisons ignore the invisible LTR isolates (U+2066/U+2069) that keep mixed Hebrew/English in order
+const ISO = /[\u2066-\u2069]/g;
+const txt = async (p, sel) => ((await p.textContent(sel)) || '').replace(ISO, '').replace(/\s+/g, ' ').trim();
+const rawShare = async p => { await p.evaluate(() => { window.__shared = null; document.getElementById('share-btn').click(); }); return p.evaluate(() => window.__shared); };
+const share = async p => (await rawShare(p))?.replace(ISO, '');
 
 // 1. Switch off (default): no button, nothing read from Supabase
 let p = await page('https://tinydose.test/calculator.html');
@@ -89,6 +92,10 @@ check(await val(p, 'dbp-days') === '5', 'duration shown in the database panel');
 check((await txt(p, '#ff-live-vol')) === '—', 'no result before a weight is entered');
 await p.fill('#ff-weight', '10'); await p.waitForTimeout(150);
 check((await txt(p, '#ff-live-vol')).replace(/[⁦⁩]/g, '') === '6–9 מ"ל', `bubble = 6–9 ml for 10 kg (${await txt(p, '#ff-live-vol')})`);
+const rawT = await rawShare(p);
+check(rawT && rawT.includes('(מוקסיפן \u2066250\u2069)'), 'WhatsApp: numbers inside Hebrew text are LTR-isolated');
+const card = await p.evaluate(() => document.querySelector('#dbp-picked .dbp-dnote').textContent);
+check(card.includes('\u2066DAG\u2069: \u20665–10\u2069'), 'doctor note: "DAG: 5–10" → DAG, colon, 5–10 in Hebrew reading order');
 let t = await share(p);
 check(t && t.includes('למשך 5 ימים') && t.includes('אמוקסיצילין (מוקסיפן 250)') && t.includes('אוטיטיס מדיה'), 'WhatsApp text has drug, diagnosis and duration');
 await p.fill('#dbp-days', '7'); await p.waitForTimeout(150);
@@ -134,7 +141,7 @@ check(await p.$eval('#dbp-picked', e => e.hidden) && await val(p, 'ff-drug') ===
 await p.click('#dbp-open'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r1"]'); await p.click('#dbp-ok');
 await p.click('#reset-btn'); await p.waitForTimeout(150);
 check(!(await p.$('#dbp-picked:not([hidden])')) && await val(p, 'ff-dose-min') === '', 'איפוס clears the database choice too');
-await p.click('#dbp-open'); await p.keyboard.press('Escape');
+await p.click('#dbp-open'); await p.waitForSelector('.dbp-overlay:not([hidden]) .dbp-row'); await p.keyboard.press('Escape');
 check(await p.$eval('.dbp-overlay', e => e.hidden), 'Escape closes the window');
 
 // 8. Desktop layout

@@ -56,7 +56,7 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { supabase, round2, esc, calculateDose } from './app.js?v=20261007b';
+import { supabase, round2, esc, calculateDose, isolateLtr } from './app.js?v=20261024a';
 
 // Numeric ranges like "6.5–9.75" must read left to right even inside Hebrew
 // text; without an LTR isolate the RTL page shows them as "9.75–6.5".
@@ -662,13 +662,13 @@ function renderFreeForm() {
     setProduct(p.product);
     const box = $('dbp-picked');
     box.innerHTML = `
-      <div class="dbp-picked-head"><span>📚 מהמאגר: <strong>${esc(drug.name_he)}</strong> · ${esc(indication.name_he)} · ${LINE_HE[rec.treatment_line] || ''}${rec.status === 'draft' ? ' <span class="dbp-draft">טיוטה</span>' : ''}</span>
+      <div class="dbp-picked-head"><span>📚 מהמאגר: <strong>${esc(isolateLtr(drug.name_he))}</strong> · ${esc(isolateLtr(indication.name_he))} · ${LINE_HE[rec.treatment_line] || ''}${rec.status === 'draft' ? ' <span class="dbp-draft">טיוטה</span>' : ''}</span>
         <button type="button" class="dbp-clear" id="dbp-clear">✕ ניקוי</button></div>
-      ${rec.doctor_note ? `<div class="dbp-dnote">🩺 ${esc(rec.doctor_note)}</div>` : ''}
-      ${products.length > 1 ? `<div class="dbp-chips" role="group" aria-label="סירופ">${products.map(pr => `<button type="button" data-prod="${esc(pr.id)}" aria-pressed="${pr === p.product}">${esc(pr.brand_name)} <span dir="ltr">${pr.conc_mg}/${pr.conc_ml}</span></button>`).join('')}</div>` : ''}
+      ${rec.doctor_note ? `<div class="dbp-dnote">🩺 ${esc(isolateLtr(rec.doctor_note))}</div>` : ''}
+      ${products.length > 1 ? `<div class="dbp-chips" role="group" aria-label="סירופ">${products.map(pr => `<button type="button" data-prod="${esc(pr.id)}" aria-pressed="${pr === p.product}">${esc(isolateLtr(pr.brand_name))} <span dir="ltr">${pr.conc_mg}/${pr.conc_ml}</span></button>`).join('')}</div>` : ''}
       ${products.length ? '' : '<div class="dbp-warn">⚠️ אין סירופ במאגר לתרופה הזו — יש להקליד את הריכוז.</div>'}
       <label class="dbp-days">משך הטיפול <input type="number" id="dbp-days" min="1" step="1" inputmode="numeric" value="${rec.duration_days ?? ''}"> ימים</label>
-      ${rec.source ? `<div class="dbp-src">מקור: ${esc(rec.source)}</div>` : ''}`;
+      ${rec.source ? `<div class="dbp-src">מקור: ${esc(isolateLtr(rec.source))}</div>` : ''}`;
     box.hidden = false;
     $('dbp-clear').onclick = clearPick;
     box.querySelectorAll('[data-prod]').forEach(b => b.onclick = () => {
@@ -692,7 +692,7 @@ function renderFreeForm() {
   }
 
   if (dbPickerOn) $('dbp-open').addEventListener('click', async () => {
-    const { openPicker } = await import('./db-picker.js?v=20261024a');
+    const { openPicker } = await import('./db-picker.js?v=20261024b');
     openPicker(applyPick);
   });
 
@@ -966,6 +966,8 @@ function renderResultArea({
   rounding = null  // { volMin, volMax } chosen by the clinician in the free flow, else null
 }) {
   const resultArea = document.getElementById('result-area');
+  // Mixed Hebrew/English (drug, diagnosis, notes) keeps its order on screen, in print and in WhatsApp
+  [drugName, indicationHe, patientName, catalogNotes] = [drugName, indicationHe, patientName, catalogNotes].map(isolateLtr);
   const patientStr = [patientName, patientId ? `ת.ז. ${patientId}` : ''].filter(Boolean).join(' · ');
   const indicationDisplay = indicationHe || (freeMode ? 'חישוב חופשי' : '');
   const patientHeaderHtml = patientStr ? `<div class="result-indication">👤 ${esc(patientStr)}</div>` : '';
@@ -1125,7 +1127,7 @@ function renderResultArea({
   `;
 
   document.getElementById('share-btn').addEventListener('click', () => {
-    const doctorNotes = document.getElementById('doctor-notes').value.trim();
+    const doctorNotes = isolateLtr(document.getElementById('doctor-notes').value.trim());
     // WhatsApp renders *text* as bold. One emoji per line so each line is
     // recognizable at a glance; the amount to give is the bold centerpiece.
     const sep = '━━━━━━━━━━━━\n';
@@ -1153,7 +1155,7 @@ function renderResultArea({
   });
 
   document.getElementById('print-btn').addEventListener('click', () => {
-    const doctorNotes = document.getElementById('doctor-notes').value.trim();
+    const doctorNotes = isolateLtr(document.getElementById('doctor-notes').value.trim());
 
     // Build the print document via DOM APIs (createElement/textContent) rather
     // than document.write(). Note: window.open('', '_blank') already returns a

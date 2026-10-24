@@ -1,7 +1,10 @@
 // admin.js — drug database admin, organised by diagnosis (see CLAUDE.md section 9)
 // Phone: the treatment-option editor is a step-by-step wizard.
 // Desktop (wide screen): the same editor is one page with a live preview column.
-import { supabase, calculateDose, round2, esc } from './app.js?v=20261007b';
+import { supabase, calculateDose, round2, esc as escRaw, isolateLtr } from './app.js?v=20261024a';
+// Text shown on screen: escaped, with mixed Hebrew/English kept in order (isolateLtr).
+// Attribute values and editable fields use escRaw, so ids and saved text stay untouched.
+const esc = x => escRaw(isolateLtr(x));
 
 const LINES = { first: 'קו ראשון', alternative: 'חלופה', allergy: 'אלרגיה לפניצילין' };
 const LINE_ORDER = { first: 0, alternative: 1, allergy: 2 };
@@ -252,7 +255,7 @@ function renderHome() {
   $('#screen').innerHTML = `
     ${topBar('ניהול המאגר', 'TinyDose', { backBtn: false, extra: '<a class="linkbtn" href="calculator.html">למחשבון</a><button class="linkbtn" id="logout">יציאה</button>' })}
     <label class="search"><span aria-hidden="true">🔍</span>
-      <input id="q" type="search" placeholder="חיפוש אבחנה, תרופה או שם מסחרי" aria-label="חיפוש" value="${esc(homeQuery)}">
+      <input id="q" type="search" placeholder="חיפוש אבחנה, תרופה או שם מסחרי" aria-label="חיפוש" value="${escRaw(homeQuery)}">
     </label>
     <div class="stack" id="home-body"></div>`;
   $('#logout').onclick = async () => { await supabase.auth.signOut(); };
@@ -270,7 +273,7 @@ function drugSearchText(d) {
 function indRow(i) {
   const rs = recsOfInd(i.id);
   const drafts = rs.filter(r => r.status === 'draft').length;
-  return `<button class="row" data-ind="${esc(i.id)}">
+  return `<button class="row" data-ind="${escRaw(i.id)}">
     <span class="name">${esc(i.name_he)}</span>
     ${drafts ? '<span class="dot" title="יש טיוטות"></span>' : ''}
     <span class="meta">${rs.length ? plural(rs.length, 'אפשרות אחת', 'אפשרויות') : 'ריק'}</span><span class="meta" aria-hidden="true">‹</span>
@@ -286,7 +289,7 @@ function homeBody() {
     body.innerHTML = `
       ${inds.length ? `<div class="section-label">אבחנות</div><div class="group">${inds.map(indRow).join('')}</div>` : ''}
       ${drugs.length ? `<div class="section-label">תרופות</div><div class="group">${drugs.map(d => `
-        <button class="row" data-drug="${esc(d.id)}"><span class="name">${esc(d.name_he)}
+        <button class="row" data-drug="${escRaw(d.id)}"><span class="name">${esc(d.name_he)}
           <div class="small">${prodsOf(d.id).map(p => esc(p.brand_name)).join(' · ') || 'אין סירופים'}</div></span><span class="meta" aria-hidden="true">‹</span></button>`).join('')}</div>` : ''}
       ${!inds.length && !drugs.length ? `<div class="empty">לא נמצא דבר עבור "${esc(homeQuery.trim())}"</div>` : ''}
       <button class="btn ghost" id="new-drug-search">+ תרופה חדשה</button>`;
@@ -304,11 +307,11 @@ function homeBody() {
       </div>` : ''}
       ${groups.map(({ c, inds }) => {
         const key = c ? c.id : 'none';
-        return `<details class="group" data-cat="${esc(key)}" ${openCats.has(key) ? 'open' : ''}>
+        return `<details class="group" data-cat="${escRaw(key)}" ${openCats.has(key) ? 'open' : ''}>
           <summary>${c ? esc(c.name_he) : 'ללא קטגוריה'}<span class="count">${plural(inds.length, 'אבחנה אחת', 'אבחנות')}</span></summary>
           ${inds.map(indRow).join('')}
-          <button class="row add" data-new-ind="${c ? esc(c.id) : ''}">+ אבחנה חדשה</button>
-          ${c ? `<button class="row muted" data-edit-cat="${esc(c.id)}">✏️ עריכת הקטגוריה</button>` : ''}
+          <button class="row add" data-new-ind="${c ? escRaw(c.id) : ''}">+ אבחנה חדשה</button>
+          ${c ? `<button class="row muted" data-edit-cat="${escRaw(c.id)}">✏️ עריכת הקטגוריה</button>` : ''}
         </details>`;
       }).join('')}
       <button class="btn ghost" id="new-cat">+ קטגוריה חדשה</button>`;
@@ -330,8 +333,8 @@ function catSheet(c) {
   const used = c ? S.inds.filter(i => i.category_id === c.id).length : 0;
   const el = sheet(`
     <h2>${c ? 'עריכת קטגוריה' : 'קטגוריה חדשה'}</h2>
-    <div class="field"><label for="cs-he">שם (עברית) *</label><input id="cs-he" value="${esc(c?.name_he)}"></div>
-    <div class="field"><label for="cs-en">שם (אנגלית)</label><input id="cs-en" dir="ltr" value="${esc(c?.name_en)}"></div>
+    <div class="field"><label for="cs-he">שם (עברית) *</label><input id="cs-he" value="${escRaw(c?.name_he)}"></div>
+    <div class="field"><label for="cs-en">שם (אנגלית)</label><input id="cs-en" dir="ltr" value="${escRaw(c?.name_en)}"></div>
     <div class="field"><label for="cs-sort">סדר תצוגה (מספר נמוך = למעלה)</label><input id="cs-sort" type="number" inputmode="numeric" dir="ltr" value="${c?.sort_order ?? 0}"></div>
     <div class="sheet-actions"><button class="btn" data-close>ביטול</button><button class="btn primary" id="cs-save">שמירה</button></div>
     ${c ? (used ? `<p class="small">אי אפשר למחוק קטגוריה שיש בה אבחנות (${used}).</p>` : '<button class="btn danger" id="cs-del">מחיקת הקטגוריה</button>') : ''}`);
@@ -354,11 +357,11 @@ function indSheet(i, defaultCat) {
   const used = i ? recsOfInd(i.id).length : 0;
   const el = sheet(`
     <h2>${i ? 'עריכת אבחנה' : 'אבחנה חדשה'}</h2>
-    <div class="field"><label for="is-he">שם (עברית) *</label><input id="is-he" value="${esc(i?.name_he)}"></div>
-    <div class="field"><label for="is-en">שם (אנגלית)</label><input id="is-en" dir="ltr" value="${esc(i?.name_en)}"></div>
+    <div class="field"><label for="is-he">שם (עברית) *</label><input id="is-he" value="${escRaw(i?.name_he)}"></div>
+    <div class="field"><label for="is-en">שם (אנגלית)</label><input id="is-en" dir="ltr" value="${escRaw(i?.name_en)}"></div>
     <div class="field"><label for="is-cat">קטגוריה</label><select id="is-cat">
       <option value="">ללא קטגוריה</option>
-      ${S.cats.map(c => `<option value="${esc(c.id)}">${esc(c.name_he)}</option>`).join('')}
+      ${S.cats.map(c => `<option value="${escRaw(c.id)}">${esc(c.name_he)}</option>`).join('')}
     </select></div>
     <div class="sheet-actions"><button class="btn" data-close>ביטול</button><button class="btn primary" id="is-save">שמירה</button></div>
     ${i ? (used ? `<p class="small">אי אפשר למחוק אבחנה שיש לה אפשרויות טיפול (${used}).</p>` : '<button class="btn danger" id="is-del">מחיקת האבחנה</button>') : ''}`);
@@ -400,9 +403,9 @@ function optCard(r, withInd = false) {
     <div class="opt-syrups">🧴 ${ps.length ? ps.map(p => `${esc(p.brand_name)} (${concText(p)})`).join(' · ') : '<span style="color:var(--bad-ink)">אין סירופ לתרופה</span>'}</div>
     ${r.doctor_note ? `<div class="opt-note">🩺 ${esc(r.doctor_note)}</div>` : ''}
     <div class="opt-foot">
-      ${r.status === 'draft' ? `<button class="btn ok" data-verify="${esc(r.id)}">✓ אמת</button>` : ''}
-      <button class="btn" data-edit="${esc(r.id)}">עריכה</button>
-      <button class="btn" data-dup="${esc(r.id)}">שכפול</button>
+      ${r.status === 'draft' ? `<button class="btn ok" data-verify="${escRaw(r.id)}">✓ אמת</button>` : ''}
+      <button class="btn" data-edit="${escRaw(r.id)}">עריכה</button>
+      <button class="btn" data-dup="${escRaw(r.id)}">שכפול</button>
       <span class="small">עודכן ${fmtDate(r.updated_at)}</span>
     </div>
   </article>`;
@@ -474,14 +477,14 @@ function renderDrug(v) {
       </div>
       <div class="section-label">סירופים</div>
       <div class="group">
-        ${ps.map(p => `<button class="row" data-prod="${esc(p.id)}"><span class="name">${esc(p.brand_name)}
+        ${ps.map(p => `<button class="row" data-prod="${escRaw(p.id)}"><span class="name">${esc(p.brand_name)}
           ${p.brand_name_en || p.search_aliases ? `<div class="small">${esc([p.brand_name_en, p.search_aliases].filter(Boolean).join(' · '))}</div>` : ''}</span>
           <span class="meta">${p.conc_mg} מ"ג ב-${p.conc_ml} מ"ל</span><span class="meta">✏️</span></button>`).join('')}
         <button class="row add" id="add-prod">+ סירופ חדש</button>
       </div>
       <div class="section-label">מופיעה באבחנות</div>
       <div class="group">
-        ${rs.map(r => `<button class="row" data-ind="${esc(r.indication_id)}"><span class="name">${esc(indById(r.indication_id)?.name_he)}</span>
+        ${rs.map(r => `<button class="row" data-ind="${escRaw(r.indication_id)}"><span class="name">${esc(indById(r.indication_id)?.name_he)}</span>
           <span class="chip l-${r.treatment_line}">${LINES[r.treatment_line]}</span><span class="meta" aria-hidden="true">‹</span></button>`).join('') || '<div class="row muted">עדיין לא בשימוש</div>'}
       </div>
       ${!ps.length && !rs.length ? '<button class="btn danger" id="del-drug">מחיקת התרופה</button>' : ''}
@@ -502,17 +505,17 @@ function renderDrug(v) {
 function drugSheet(d, onSaved, prefill = '') {
   const el = sheet(`
     <h2>${d ? 'עריכת תרופה' : 'תרופה חדשה'}</h2>
-    <div class="field"><label for="ds-he">שם גנרי (עברית) *</label><input id="ds-he" value="${esc(d ? d.name_he : prefill)}"></div>
-    <div class="field"><label for="ds-en">שם גנרי (אנגלית)</label><input id="ds-en" dir="ltr" value="${esc(d?.name_en)}"></div>
+    <div class="field"><label for="ds-he">שם גנרי (עברית) *</label><input id="ds-he" value="${escRaw(d ? d.name_he : prefill)}"></div>
+    <div class="field"><label for="ds-en">שם גנרי (אנגלית)</label><input id="ds-en" dir="ltr" value="${escRaw(d?.name_en)}"></div>
     <div id="ds-similar"></div>
-    <div class="field"><label for="ds-alias">שמות נוספים לחיפוש (מופרדים בפסיק)</label><input id="ds-alias" value="${esc(d?.search_aliases)}"></div>
+    <div class="field"><label for="ds-alias">שמות נוספים לחיפוש (מופרדים בפסיק)</label><input id="ds-alias" value="${escRaw(d?.search_aliases)}"></div>
     <div class="field"><label for="ds-max">מקסימום יומי (מ"ג)</label><input id="ds-max" type="number" inputmode="decimal" dir="ltr" value="${d?.max_daily_dose_mg ?? ''}"></div>
     <div class="sheet-actions"><button class="btn" data-close>ביטול</button><button class="btn primary" id="ds-save">שמירה</button></div>`);
   const checkSimilar = () => {
     const sim = similarDrugs([$('#ds-he').value, $('#ds-en').value], d?.id);
     $('#ds-similar').innerHTML = sim.length ? `<div class="note-box note-warn">
       <span>⚠️ כבר קיימת תרופה דומה: <strong>${sim.map(s => esc(s.name_he)).join(', ')}</strong></span>
-      ${d ? '' : sim.map(s => `<button class="btn" data-use="${esc(s.id)}">להשתמש ב${esc(s.name_he)}</button>`).join('')}
+      ${d ? '' : sim.map(s => `<button class="btn" data-use="${escRaw(s.id)}">להשתמש ב${esc(s.name_he)}</button>`).join('')}
     </div>` : '';
     $$('#ds-similar [data-use]').forEach(b => b.onclick = () => { closeSheet(); onSaved(drugById(b.dataset.use)); });
   };
@@ -539,16 +542,16 @@ function prodSheet(p, drugId, onSaved) {
   const d = drugById(drugId);
   const el = sheet(`
     <h2>${p ? 'עריכת סירופ' : 'סירופ חדש'} · ${esc(d?.name_he)}</h2>
-    <div class="field"><label for="ps-he">שם מסחרי (עברית) *</label><input id="ps-he" value="${esc(p?.brand_name)}" placeholder="לדוגמה: מוקסיפן 250"></div>
-    <div class="field"><label for="ps-en">שם מסחרי (אנגלית)</label><input id="ps-en" dir="ltr" value="${esc(p?.brand_name_en)}"></div>
-    <div class="field"><label for="ps-alias">שמות נוספים לחיפוש (מופרדים בפסיק)</label><input id="ps-alias" value="${esc(p?.search_aliases)}"></div>
+    <div class="field"><label for="ps-he">שם מסחרי (עברית) *</label><input id="ps-he" value="${escRaw(p?.brand_name)}" placeholder="לדוגמה: מוקסיפן 250"></div>
+    <div class="field"><label for="ps-en">שם מסחרי (אנגלית)</label><input id="ps-en" dir="ltr" value="${escRaw(p?.brand_name_en)}"></div>
+    <div class="field"><label for="ps-alias">שמות נוספים לחיפוש (מופרדים בפסיק)</label><input id="ps-alias" value="${escRaw(p?.search_aliases)}"></div>
     <div class="pair">
       <div class="field"><label for="ps-mg">ריכוז: מ"ג *</label><input id="ps-mg" type="number" inputmode="decimal" dir="ltr" value="${p?.conc_mg ?? ''}"></div>
       <span class="sep">ב-</span>
       <div class="field"><label for="ps-ml">מ"ל *</label><input id="ps-ml" type="number" inputmode="decimal" dir="ltr" value="${p?.conc_ml ?? 5}"></div>
     </div>
     <div class="small" id="ps-res"></div>
-    <div class="field"><label for="ps-note">הערה להורים (הכנה, שמירה)</label><textarea id="ps-note" rows="2">${esc(p?.parent_note)}</textarea></div>
+    <div class="field"><label for="ps-note">הערה להורים (הכנה, שמירה)</label><textarea id="ps-note" rows="2">${escRaw(p?.parent_note)}</textarea></div>
     <div class="sheet-actions"><button class="btn" data-close>ביטול</button><button class="btn primary" id="ps-save">שמירה</button></div>
     ${p ? '<button class="btn danger" id="ps-del">מחיקת הסירופ</button>' : ''}`);
   const res = () => {
@@ -665,7 +668,7 @@ function secDrug() {
   const d = drugById(E.r.drug_id);
   return `<h2>1 · תרופה</h2>
     ${E.mode === 'dup' ? `<div class="field"><label for="ed-ind">לאיזו אבחנה לשכפל?</label><select id="ed-ind">
-      ${[...S.inds].sort((a, b) => a.name_he.localeCompare(b.name_he, 'he')).map(i => `<option value="${esc(i.id)}" ${i.id === E.r.indication_id ? 'selected' : ''}>${esc(i.name_he)}</option>`).join('')}
+      ${[...S.inds].sort((a, b) => a.name_he.localeCompare(b.name_he, 'he')).map(i => `<option value="${escRaw(i.id)}" ${i.id === E.r.indication_id ? 'selected' : ''}>${esc(i.name_he)}</option>`).join('')}
     </select></div>` : ''}
     ${d ? `<div class="pick" aria-pressed="true"><span class="check">✓</span><span class="name">${esc(d.name_he)}${d.name_en ? `<br><span class="small" dir="ltr">${esc(d.name_en)}</span>` : ''}</span>
       <button class="btn" id="change-drug">החלפה</button></div>` : `
@@ -683,21 +686,21 @@ function secDose() {
   return `<h2>2 · מינון</h2>
     ${d ? `<div class="small">${esc(d.name_he)} · מקסימום יומי של התרופה ${d.max_daily_dose_mg != null ? d.max_daily_dose_mg + ' מ"ג' : 'לא הוגדר'}</div>` : ''}
     ${others.length ? `<div class="note-box note-info"><span>התרופה כבר מופיעה באבחנות אחרות. להעתיק משם את המינון?</span>
-      ${others.map(o => `<button class="btn" data-copy="${esc(o.id)}">${esc(indById(o.indication_id)?.name_he)}: ${rng(o.dose_min_mg_per_kg_day, o.dose_max_mg_per_kg_day)} · ${dosesText(o.doses_per_day)}${o.duration_days ? ` · ${o.duration_days} ימים` : ''}</button>`).join('')}
+      ${others.map(o => `<button class="btn" data-copy="${escRaw(o.id)}">${esc(indById(o.indication_id)?.name_he)}: ${rng(o.dose_min_mg_per_kg_day, o.dose_max_mg_per_kg_day)} · ${dosesText(o.doses_per_day)}${o.duration_days ? ` · ${o.duration_days} ימים` : ''}</button>`).join('')}
     </div>` : ''}
     <div class="field"><label>קו טיפול</label>
       <div class="seg">${Object.entries(LINES).map(([k, t]) => `<button type="button" aria-pressed="${r.treatment_line === k}" data-line="${k}">${t}</button>`).join('')}</div>
     </div>
     <div class="pair">
-      <div class="field"><label for="ed-min">מינון (מ"ג/ק"ג/יום) *</label><input id="ed-min" type="number" inputmode="decimal" dir="ltr" value="${esc(r.dose_min_mg_per_kg_day)}"></div>
+      <div class="field"><label for="ed-min">מינון (מ"ג/ק"ג/יום) *</label><input id="ed-min" type="number" inputmode="decimal" dir="ltr" value="${escRaw(r.dose_min_mg_per_kg_day)}"></div>
       <span class="sep">עד</span>
-      <div class="field"><label for="ed-max">(לא חובה)</label><input id="ed-max" type="number" inputmode="decimal" dir="ltr" value="${esc(r.dose_max_mg_per_kg_day)}"></div>
+      <div class="field"><label for="ed-max">(לא חובה)</label><input id="ed-max" type="number" inputmode="decimal" dir="ltr" value="${escRaw(r.dose_max_mg_per_kg_day)}"></div>
     </div>
     <div class="pair">
-      <div class="field"><label for="ed-doses">מנות ביום *</label><input id="ed-doses" type="number" inputmode="numeric" dir="ltr" value="${esc(r.doses_per_day)}"></div>
-      <div class="field"><label for="ed-days">משך (ימים)</label><input id="ed-days" type="number" inputmode="numeric" dir="ltr" value="${esc(r.duration_days)}"></div>
+      <div class="field"><label for="ed-doses">מנות ביום *</label><input id="ed-doses" type="number" inputmode="numeric" dir="ltr" value="${escRaw(r.doses_per_day)}"></div>
+      <div class="field"><label for="ed-days">משך (ימים)</label><input id="ed-days" type="number" inputmode="numeric" dir="ltr" value="${escRaw(r.duration_days)}"></div>
     </div>
-    <div class="field"><label for="ed-maxd">מקסימום יומי לאבחנה הזו (מ"ג, לא חובה)</label><input id="ed-maxd" type="number" inputmode="decimal" dir="ltr" value="${esc(r.max_daily_dose_mg)}" placeholder="${d?.max_daily_dose_mg != null ? 'ריק = של התרופה: ' + d.max_daily_dose_mg : ''}"></div>`;
+    <div class="field"><label for="ed-maxd">מקסימום יומי לאבחנה הזו (מ"ג, לא חובה)</label><input id="ed-maxd" type="number" inputmode="decimal" dir="ltr" value="${escRaw(r.max_daily_dose_mg)}" placeholder="${d?.max_daily_dose_mg != null ? 'ריק = של התרופה: ' + d.max_daily_dose_mg : ''}"></div>`;
 }
 
 function secSyrups() {
@@ -706,7 +709,7 @@ function secSyrups() {
   const ps = prodsOf(d.id);
   return `<h2>3 · סירופים</h2>
     <div class="small">הסירופים שייכים לתרופה, ולכן יופיעו בכל האבחנות שלה.</div>
-    ${ps.length ? `<div class="group">${ps.map(p => `<button type="button" class="row" data-prod="${esc(p.id)}"><span class="name">${esc(p.brand_name)}</span>
+    ${ps.length ? `<div class="group">${ps.map(p => `<button type="button" class="row" data-prod="${escRaw(p.id)}"><span class="name">${esc(p.brand_name)}</span>
       <span class="meta">${p.conc_mg} מ"ג ב-${p.conc_ml} מ"ל (${round2(p.conc_mg / p.conc_ml)} מ"ג/מ"ל)</span><span class="meta">✏️</span></button>`).join('')}</div>`
       : '<div class="note-box note-warn">⚠️ לתרופה הזו עוד אין סירופ.</div>'}
     <button type="button" class="btn ghost" id="add-syrup" style="align-self:flex-start">+ סירופ חדש</button>`;
@@ -715,9 +718,9 @@ function secSyrups() {
 function secNotes() {
   const r = E.r;
   return `<h2>4 · הערות ומקור</h2>
-    <div class="field"><label for="ed-dnote">הערה לרופא</label><textarea id="ed-dnote" rows="2" placeholder="מוצגת רק בחלון המינון">${esc(r.doctor_note)}</textarea></div>
-    <div class="field"><label for="ed-pnote">הערה להורים</label><textarea id="ed-pnote" rows="2" placeholder="עוברת לתדפיס ולוואטסאפ">${esc(r.parent_note)}</textarea></div>
-    <div class="field"><label for="ed-src">מקור</label><input id="ed-src" value="${esc(r.source)}" placeholder="לדוגמה: הנחיות האיגוד לרפואת ילדים"></div>`;
+    <div class="field"><label for="ed-dnote">הערה לרופא</label><textarea id="ed-dnote" rows="2" placeholder="מוצגת רק בחלון המינון">${escRaw(r.doctor_note)}</textarea></div>
+    <div class="field"><label for="ed-pnote">הערה להורים</label><textarea id="ed-pnote" rows="2" placeholder="עוברת לתדפיס ולוואטסאפ">${escRaw(r.parent_note)}</textarea></div>
+    <div class="field"><label for="ed-src">מקור</label><input id="ed-src" value="${escRaw(r.source)}" placeholder="לדוגמה: הנחיות האיגוד לרפואת ילדים"></div>`;
 }
 
 function secSummary() {
@@ -737,7 +740,7 @@ function secSummary() {
 
 function previewBlock() {
   return `<h2>תצוגה מקדימה</h2>
-    <div class="field"><label for="ed-w">משקל נוסף לבדיקה (ק"ג)</label><input id="ed-w" type="number" inputmode="decimal" dir="ltr" value="${esc(E.weight)}"></div>
+    <div class="field"><label for="ed-w">משקל נוסף לבדיקה (ק"ג)</label><input id="ed-w" type="number" inputmode="decimal" dir="ltr" value="${escRaw(E.weight)}"></div>
     <div id="ed-pv">${previewHtml(E.r, E.weight)}</div>`;
 }
 
@@ -757,7 +760,7 @@ function bindEditor() {
       const q = dq.value.trim().toLowerCase();
       const ds = S.drugs.filter(d => !q || drugSearchText(d).includes(q));
       $('#drug-picks').innerHTML = ds.map(d => `
-        <button type="button" class="pick" data-pick="${esc(d.id)}"><span class="check">✓</span>
+        <button type="button" class="pick" data-pick="${escRaw(d.id)}"><span class="check">✓</span>
           <span class="name">${esc(d.name_he)}${d.name_en ? `<br><span class="small" dir="ltr">${esc(d.name_en)}</span>` : ''}</span>
           <span class="small">${plural(prodsOf(d.id).length, 'סירופ אחד', 'סירופים')}</span></button>`).join('')
         || '<div class="small">לא נמצאה תרופה. אפשר להוסיף חדשה.</div>';

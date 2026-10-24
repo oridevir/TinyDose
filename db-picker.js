@@ -4,7 +4,9 @@
 // to the calculator, which fills its own fields; all math stays in calculateDose().
 // Visitors see verified options only (enforced in Supabase); a signed-in admin also
 // sees drafts, marked as such.
-import { supabase, esc } from './app.js?v=20261007b';
+import { supabase, esc, isolateLtr } from './app.js?v=20261024a';
+// Text content from the database: escaped + mixed Hebrew/English kept in order
+const t = x => esc(isolateLtr(x));
 
 const LINES = { first: 'קו ראשון', alternative: 'חלופה', allergy: 'אלרגיה לפניצילין' };
 const LINE_ORDER = { first: 0, alternative: 1, allergy: 2 };
@@ -65,7 +67,7 @@ export async function openPicker(cb) {
   if (!D) {
     body('<div class="dbp-msg">טוען את המאגר…</div>');
     try { await (loading ||= load()); }
-    catch (e) { loading = null; body(`<div class="dbp-msg dbp-err">לא ניתן לטעון את המאגר כרגע. אפשר להמשיך בחישוב ידני.<br><small>${esc(e.message || e)}</small></div>`); return; }
+    catch (e) { loading = null; body(`<div class="dbp-msg dbp-err">לא ניתן לטעון את המאגר כרגע. אפשר להמשיך בחישוב ידני.<br><small>${t(e.message || e)}</small></div>`); return; }
   }
   render();
 }
@@ -97,10 +99,10 @@ function renderHome() {
   const drafts = D.recs.some(r => r.status === 'draft');
   body(`${drafts ? '<div class="dbp-note">אתה מחובר כמנהל — מוצגות גם טיוטות (רופאים רואים רק המלצות מאומתות).</div>' : ''}
     ${groups.filter(g => g.inds.length).map(g => `
-      <div class="dbp-cat">${esc(g.name)}</div>
+      <div class="dbp-cat">${t(g.name)}</div>
       <div class="dbp-list">${g.inds.sort((a, b) => a.name_he.localeCompare(b.name_he, 'he')).map(indBtn).join('')}</div>`).join('')}`);
 }
-const indBtn = i => `<button type="button" class="dbp-row" data-ind="${esc(i.id)}"><span>${esc(i.name_he)}</span><span class="dbp-sub">${D.recsOf(i.id).length} אפשרויות ‹</span></button>`;
+const indBtn = i => `<button type="button" class="dbp-row" data-ind="${esc(i.id)}"><span>${t(i.name_he)}</span><span class="dbp-sub">${D.recsOf(i.id).length} אפשרויות ‹</span></button>`;
 
 function renderSearch() {
   const q = norm(query);
@@ -112,22 +114,22 @@ function renderSearch() {
   body(`${inds.length ? `<div class="dbp-cat">אבחנות</div><div class="dbp-list">${inds.map(indBtn).join('')}</div>` : ''}
     ${recs.length ? `<div class="dbp-cat">תרופות</div><div class="dbp-list">${recs.map(r => `
       <button type="button" class="dbp-row" data-rec="${esc(r.id)}">
-        <span>${esc(D.drug[r.drug_id].name_he)} · ${esc(D.ind[r.indication_id].name_he)} ${draft(r)}</span>
+        <span>${t(D.drug[r.drug_id].name_he)} · ${t(D.ind[r.indication_id].name_he)} ${draft(r)}</span>
         <span class="dbp-sub">${LINES[r.treatment_line] || ''}</span></button>`).join('')}</div>` : ''}`);
 }
 
 function renderInd(id) {
   const ind = D.ind[id];
   const recs = D.recsOf(id);
-  body(`<h3 class="dbp-ind">${esc(ind.name_he)}</h3>
+  body(`<h3 class="dbp-ind">${t(ind.name_he)}</h3>
     ${Object.keys(LINES).map(line => {
       const rs = recs.filter(r => r.treatment_line === line);
       return rs.length ? `<div class="dbp-cat">${LINES[line]}</div>${rs.map(r => {
         const d = D.drug[r.drug_id];
         return `<button type="button" class="dbp-card" data-rec="${esc(r.id)}">
-          <span class="dbp-card-head"><strong>${esc(d.name_he)}</strong>${d.name_en ? ` <span class="dbp-sub" dir="ltr">${esc(d.name_en)}</span>` : ''} ${draft(r)}</span>
+          <span class="dbp-card-head"><strong>${t(d.name_he)}</strong>${d.name_en ? ` <span class="dbp-sub" dir="ltr">${t(d.name_en)}</span>` : ''} ${draft(r)}</span>
           <span>${doseLine(r, d)}</span>
-          ${r.doctor_note ? `<span class="dbp-dnote">🩺 ${esc(r.doctor_note)}</span>` : ''}
+          ${r.doctor_note ? `<span class="dbp-dnote">🩺 ${t(r.doctor_note)}</span>` : ''}
         </button>`;
       }).join('')}` : '';
     }).join('')}`);
@@ -138,20 +140,20 @@ function renderConfirm(recId) {
   const ps = D.prodsOf(d.id), mx = effMax(r, d);
   body(`<h3 class="dbp-ind">מינון מומלץ ${draft(r)}</h3>
     <dl class="dbp-dl">
-      <dt>אבחנה</dt><dd>${esc(ind.name_he)} · ${LINES[r.treatment_line] || ''}</dd>
-      <dt>תרופה</dt><dd>${esc(d.name_he)}${d.name_en ? ` <span dir="ltr">(${esc(d.name_en)})</span>` : ''}</dd>
+      <dt>אבחנה</dt><dd>${t(ind.name_he)} · ${LINES[r.treatment_line] || ''}</dd>
+      <dt>תרופה</dt><dd>${t(d.name_he)}${d.name_en ? ` <span dir="ltr">(${t(d.name_en)})</span>` : ''}</dd>
       <dt>מינון</dt><dd>${rng(r.dose_min_mg_per_kg_day, r.dose_max_mg_per_kg_day)} מ"ג/ק"ג/יום</dd>
       <dt>מנות ביום</dt><dd>${dosesText(r.doses_per_day)}</dd>
       ${r.duration_days ? `<dt>משך</dt><dd>${r.duration_days} ימים</dd>` : ''}
       <dt>מקסימום יומי</dt><dd>${mx != null ? `${mx} מ"ג` : 'לא הוגדר'}</dd>
-      ${r.source ? `<dt>מקור</dt><dd>${esc(r.source)}</dd>` : ''}
+      ${r.source ? `<dt>מקור</dt><dd>${t(r.source)}</dd>` : ''}
     </dl>
-    ${r.doctor_note ? `<div class="dbp-dnote dbp-box">🩺 <strong>הערה לרופא:</strong> ${esc(r.doctor_note)}</div>` : ''}
-    ${r.parent_note ? `<div class="dbp-box">👪 <strong>הערה להורים</strong> (תעבור לתדפיס ולשליחה): ${esc(r.parent_note)}</div>` : ''}
+    ${r.doctor_note ? `<div class="dbp-dnote dbp-box">🩺 <strong>הערה לרופא:</strong> ${t(r.doctor_note)}</div>` : ''}
+    ${r.parent_note ? `<div class="dbp-box">👪 <strong>הערה להורים</strong> (תעבור לתדפיס ולשליחה): ${t(r.parent_note)}</div>` : ''}
     <div class="dbp-cat">סירופ</div>
     ${ps.length ? `<div class="dbp-list" role="radiogroup" aria-label="בחירת סירופ">${ps.map((p, i) => `
       <label class="dbp-row dbp-radio"><input type="radio" name="dbp-prod" value="${esc(p.id)}"${i === 0 ? ' checked' : ''}>
-        <span>${esc(p.brand_name)}</span><span class="dbp-sub" dir="ltr">${p.conc_mg} mg / ${p.conc_ml} ml</span></label>`).join('')}</div>`
+        <span>${t(p.brand_name)}</span><span class="dbp-sub" dir="ltr">${p.conc_mg} mg / ${p.conc_ml} ml</span></label>`).join('')}</div>`
       : '<div class="dbp-box dbp-warn">⚠️ אין סירופ במאגר לתרופה הזו — את הריכוז יש להקליד ידנית בדף החישוב.</div>'}
     <p class="dbp-sub">המשקל לא מתמלא מהמאגר. כל שדה נשאר ניתן לעריכה.</p>
     <div class="dbp-actions">
