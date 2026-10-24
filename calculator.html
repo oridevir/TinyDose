@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261025a">
+  <link rel="stylesheet" href="style.css?v=20261025b">
   <script src="config.js?v=20261024a"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 </head>
@@ -455,21 +455,55 @@ function renderResult(med, weight) {
 function startParallax() {
   if (startParallax.done) return; // function property: routing runs before a `let` here would exist
   startParallax.done = true;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const layers = [...document.querySelectorAll('.sky-layer')].map(el => ({
-    el, speed: parseFloat(el.dataset.speed) || 0,
-    base: getComputedStyle(el).backgroundPosition.split(' ').map(v => parseFloat(v) || 0),
-  }));
-  let ticking = false;
-  const update = () => {
-    ticking = false;
-    const y = window.scrollY;
-    for (const l of layers) l.el.style.backgroundPosition = `${l.base[0]}px ${l.base[1] - y * l.speed}px`;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const layers = [...document.querySelectorAll('.sky-layer')].map(el => {
+    const cs = getComputedStyle(el);
+    return {
+      el, speed: parseFloat(el.dataset.speed) || 0, wind: 0,
+      base: cs.backgroundPosition.split(' ').map(v => parseFloat(v) || 0),
+      tile: parseFloat(cs.backgroundSize) || 1000,   // the pattern repeats every `tile` px sideways
+    };
+  });
+  const draw = () => {
+    const y = reduce ? 0 : window.scrollY;
+    for (const l of layers) l.el.style.backgroundPosition = `${l.base[0] + l.wind}px ${l.base[1] - y * l.speed}px`;
   };
-  window.addEventListener('scroll', () => {
-    if (!ticking) { ticking = true; requestAnimationFrame(update); }
-  }, { passive: true });
-  update();
+  if (!reduce) {
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(() => { ticking = false; draw(); }); }
+    }, { passive: true });
+  }
+
+  // Wind (experiment, ?db=1 page only): every layer drifts slowly to the right, at
+  // a speed matching its depth — the near (big) clouds faster than the far ones.
+  const WIND_PX_PER_SEC = 60;   // × layer depth: far 0.12 ≈ 7px/s, mid 0.25 = 15px/s, near 0.42 ≈ 25px/s
+  let windOn = false, last = 0;
+  const tick = now => {
+    if (!windOn) return;
+    const dt = Math.min((now - last) / 1000, 0.1);
+    last = now;
+    for (const l of layers) l.wind = (l.wind + WIND_PX_PER_SEC * l.speed * dt) % l.tile;
+    draw();
+    requestAnimationFrame(tick);
+  };
+  startParallax.setWind = on => {
+    windOn = on;
+    document.body.classList.toggle('sky-wind', on);   // stops the old back-and-forth sway while the wind blows
+    if (on) { last = performance.now(); requestAnimationFrame(tick); }
+  };
+  if (dbPickerOn) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'wind-toggle'; btn.setAttribute('aria-pressed', 'false');
+    btn.innerHTML = '☁️ <span>עננים זזים</span>';
+    btn.addEventListener('click', () => {
+      const on = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', String(on));
+      startParallax.setWind(on);
+    });
+    document.body.appendChild(btn);
+  }
+  draw();
 }
 
 // ── Free calculation flow ──
