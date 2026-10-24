@@ -68,23 +68,34 @@ p = await page('https://tinydose.test/calculator.html?db=1');
 check(await p.$eval('#dbp-picked', e => getComputedStyle(e).display === 'none'), 'database panel really invisible before a choice');
 await p.evaluate(() => window.scrollTo(0, 0));
 await p.evaluate(() => document.getElementById('dbp-open').click());   // no auto-scroll, like a real tap
-await p.waitForSelector('.dbp-overlay:not([hidden]) .dbp-row');
+await p.waitForSelector('.dbp-overlay:not([hidden]) .dbp-catcard');
 const vis = await p.evaluate(() => { const r = document.querySelector('.dbp-sheet').getBoundingClientRect();
   return { pos: getComputedStyle(document.querySelector('.dbp-overlay')).position, top: r.top, bottom: r.bottom, h: innerHeight, y: scrollY }; });
 check(vis.pos === 'fixed' && vis.top >= 0 && vis.bottom <= vis.h + 1 && vis.y === 0, `window opens on screen without scrolling (${JSON.stringify(vis)})`);
+check(vis.top === 0 && Math.abs(vis.bottom - vis.h) <= 1, 'phone: window fills the screen');
 const home = await txt(p, '#dbp-body');
-check(home.includes('אוטיטיס מדיה') && home.includes('זיהום בדרכי השתן'), 'home lists diagnoses by category');
-check(!home.includes('אוטיטיס אקסטרנה'), 'diagnosis without options is hidden');
+check(home.includes('אף-אוזן-גרון') && home.includes('דרכי שתן') && !home.includes('אוטיטיס מדיה'), 'home shows categories only');
 check(home.includes('טיוטות'), 'draft notice shown when drafts are visible');
+await p.click('[data-cat="c1"]');
+const cat = await txt(p, '#dbp-body');
+check(cat.includes('אוטיטיס מדיה') && cat.includes('טונסיליטיס') && !cat.includes('זיהום בדרכי השתן'), 'category shows its diagnoses');
+check(!cat.includes('אוטיטיס אקסטרנה'), 'diagnosis without options is hidden');
 const sw = await p.evaluate(() => document.documentElement.scrollWidth); check(sw <= 390, `phone: no horizontal scroll (${sw})`);
 
 // 3. Browse → diagnosis → option → confirm → fields filled (never the weight)
 await p.click('[data-ind="i1"]');
 const ind = await txt(p, '#dbp-body');
-check(ind.indexOf('קו ראשון') < ind.indexOf('חלופה'), 'options grouped by line, first line first');
-check(ind.includes('משך לפי DAG'), 'doctor note shown on the option card');
+check(ind.includes('אמוקסיצילין') && ind.includes('אמוקסיצילין-קלבולנט') && !ind.includes('מ"ג/ק"ג') && !ind.includes('משך לפי DAG'), 'diagnosis shows drug names only');
+check(ind.indexOf('קו ראשון') < ind.indexOf('חלופה'), 'first line listed first');
+check((await txt(p, '#dbp-crumbs')) === 'אף-אוזן-גרון › אוטיטיס מדיה', 'breadcrumbs show where you are');
 await p.click('[data-rec="r1"]');
-check((await txt(p, '#dbp-body')).includes('מינון מומלץ'), 'confirm window opens');
+const det = await txt(p, '#dbp-body');
+check(det.includes('מילוי בדף החישוב') && det.includes('משך לפי DAG') && det.includes('3000') && det.includes('מוקסיפן 250'), 'drug screen: all details, note, syrup and fill button');
+await p.click('#dbp-back'); await p.click('#dbp-back');
+check((await txt(p, '#dbp-body')).includes('טונסיליטיס'), 'back: drug → diagnosis → category');
+await p.click('#dbp-back');
+check(!!(await p.$('[data-cat]')), 'back again: categories');
+await p.click('[data-cat="c1"]'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r1"]');
 await p.click('#dbp-ok');
 check(await p.$eval('.dbp-overlay', e => e.hidden), 'window closes after confirm');
 check(await val(p, 'ff-drug') === 'אמוקסיצילין (מוקסיפן 250)', 'drug name + syrup filled');
@@ -111,7 +122,7 @@ check((await txt(p, '#ff-live-sub')).includes('הוגבל'), '40 kg: range cappe
 
 // 4. New choice replaces the old one; parent note lands in the parents' notes; drafts marked
 await p.click('#dbp-open'); await p.fill('#dbp-q', 'אזניל'); await p.waitForTimeout(100);
-check((await txt(p, '#dbp-body')).includes('אזיתרומיצין · טונסיליטיס'), 'search by brand name finds the option');
+const sr = await txt(p, '#dbp-body'); check(sr.includes('אזיתרומיצין') && sr.includes('טונסיליטיס') && !sr.includes('אמוקסיצילין'), 'search by brand name finds the option');
 await p.click('[data-rec="r3"]');
 check((await txt(p, '#dbp-body')).includes('טיוטה'), 'draft badge in confirm window');
 await p.click('#dbp-ok'); await p.waitForTimeout(150);
@@ -144,16 +155,24 @@ check((await txt(p, '#ff-live-vol')).length > 1 && !(await txt(p, '#ff-live-vol'
 // 7. Clear, reset, close
 await p.click('#dbp-clear'); await p.waitForTimeout(100);
 check(await p.$eval('#dbp-picked', e => e.hidden) && await val(p, 'ff-drug') === '' && await val(p, 'ff-dose-min') === '', '"ניקוי" empties the filled fields and the panel');
-await p.click('#dbp-open'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r1"]'); await p.click('#dbp-ok');
+await p.click('#dbp-open'); await p.click('[data-cat="c1"]'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r1"]'); await p.click('#dbp-ok');
 await p.click('#reset-btn'); await p.waitForTimeout(150);
 check(!(await p.$('#dbp-picked:not([hidden])')) && await val(p, 'ff-dose-min') === '', 'איפוס clears the database choice too');
-await p.click('#dbp-open'); await p.waitForSelector('.dbp-overlay:not([hidden]) .dbp-row'); await p.keyboard.press('Escape');
+await p.click('#dbp-open'); await p.waitForSelector('.dbp-overlay:not([hidden]) .dbp-catcard'); await p.keyboard.press('Escape');
 check(await p.$eval('.dbp-overlay', e => e.hidden), 'Escape closes the window');
 
-// 8. Desktop layout
+// 8. Phone keyboard: the window shrinks with the visible area, results stay above the keyboard
+p = await page('https://tinydose.test/calculator.html?db=1');
+await p.click('#dbp-open'); await p.waitForSelector('.dbp-catcard');
+await p.setViewportSize({ width: 390, height: 420 });   // like a keyboard taking half the screen
+await p.fill('#dbp-q', 'אמוקס'); await p.waitForTimeout(200);
+const kb = await p.evaluate(() => { const r = document.querySelector('#dbp-body .dbp-pill').getBoundingClientRect(); return { b: r.bottom, h: innerHeight }; });
+check(kb.b <= kb.h, `search: first result visible above the keyboard (${JSON.stringify(kb)})`);
+
+// 9. Desktop layout
 p = await page('https://tinydose.test/calculator.html?db=1', { width: 1280, height: 900 });
-await p.click('#dbp-open'); await p.waitForSelector('.dbp-row');
-const box = await p.$eval('.dbp-sheet', e => e.getBoundingClientRect().width); check(box <= 640, `desktop: window width ${box}px`);
+await p.click('#dbp-open'); await p.waitForSelector('.dbp-catcard');
+const box = await p.$eval('.dbp-sheet', e => e.getBoundingClientRect().width); check(box <= 560, `desktop: window width ${box}px`);
 
 console.log('ERRORS', errs);
 console.log(fails.length ? `FAILED ${fails.length}` : 'ALL PASSED');
