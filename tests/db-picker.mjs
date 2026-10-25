@@ -59,14 +59,11 @@ const val = (p, id) => p.inputValue('#' + id);
 // Comparisons ignore the invisible LTR isolates (U+2066/U+2069) that keep mixed Hebrew/English in order
 const ISO = /[\u2066-\u2069]/g;
 const txt = async (p, sel) => ((await p.textContent(sel)) || '').replace(ISO, '').replace(/\s+/g, ' ').trim();
-// Send goes through the "הכנה להורים" window; for a range type the low end as the amount
+// Send goes through the "הכנה להורים" window; for a range set the slider to its low end
 const rawShare = async p => {
   await p.evaluate(() => { window.__shared = null; document.getElementById('share-btn').click(); });
   await p.waitForSelector('.pp-overlay #pp-ok');
-  if (await p.$('#pp-amount')) {
-    const low = (await p.textContent('#ff-live-vol')).replace(ISO, '').match(/[\d.]+/)[0];
-    await p.fill('#pp-amount', low);
-  }
+  if (await p.$('#pp-amount')) await p.evaluate(() => { const r = document.getElementById('pp-amount'); r.value = r.min; r.dispatchEvent(new Event('input', { bubbles: true })); });
   await p.click('#pp-ok');
   return p.evaluate(() => window.__shared);
 };

@@ -117,10 +117,13 @@ const read = () => p.evaluate(() => ({
 }));
 
 // Send / print open the "הכנה להורים" window: for a range, type an amount (required), then confirm
+// The amount is a slider limited to the calculated range (0.1 ml steps): returns what it settled on
+const setSlider = v => p.evaluate(v => { const r = document.getElementById('pp-amount'); r.value = String(v); r.dispatchEvent(new Event('input', { bubbles: true })); return +r.value; }, v);
 async function parentsConfirm(amount) {
   await p.waitForSelector('.pp-overlay #pp-ok');
-  if (await p.$('#pp-amount')) await p.fill('#pp-amount', String(amount));
+  const got = (await p.$('#pp-amount')) ? await setSlider(amount) : null;
   await p.click('#pp-ok');
+  return got;
 }
 const failures = [];
 const fail = (s, msg) => failures.push(`${s.name} ${JSON.stringify({ w: s.w, dose: [s.dmin, s.dmax], n: s.n, days: s.d, conc: [s.cmg, s.cml], max: s.max })}\n    → ${msg}`);
@@ -166,13 +169,15 @@ for (const [idx, s] of S.entries()) {
     await p.evaluate(() => { window.__shared = null; document.getElementById('share-btn').click(); });
     const isRange = v[0] !== v[1];
     if (isRange !== !!(await p.$('#pp-amount'))) fail(s, `parents window: amount field ${isRange ? 'missing for a range' : 'shown for a single amount'}`);
-    await parentsConfirm(v[0]);   // parents get one amount: the low end, as typed by the "doctor"
+    const got = await parentsConfirm(v[0]);   // parents get one amount: the slider's lowest point
+    const want = isRange ? got : v[0];
+    if (isRange && (got < v[0] - 1e-9 || got > v[1] + 1e-9 || got > v[0] + 0.1 + 1e-9)) fail(s, `slider low end ${got} not at the range start ${v[0]}`);
     const t = await p.evaluate(() => window.__shared);
     shareChecks++;
     if (!t) fail(s, 'share produced no text');
     else {
       const m = clean(t).match(/לתת\s+([\d.]+)(?:–([\d.]+))?\s*מ"ל/);
-      if (!m || +m[1] !== v[0] || m[2] != null) fail(s, `share volume "${m?.[0]}" should be one amount ${v[0]}`);
+      if (!m || +m[1] !== want || m[2] != null) fail(s, `share volume "${m?.[0]}" should be one amount ${want}`);
       for (const bad of ['NaN', 'undefined', 'null']) if (t.includes(bad)) fail(s, `share contains ${bad}`);
       if (!clean(t).includes(`למשך ${s.d} ימים`)) fail(s, 'share text does not show the days');
       const brs = badRanges(t); if (brs.length) fail(s, `share range without isolation: ${brs}`);
@@ -181,12 +186,14 @@ for (const [idx, s] of S.entries()) {
   // print (every 12th)
   if (idx % 12 === 0) {
     await p.click('#print-btn');
-    const [pw] = await Promise.all([ctx.waitForEvent('page'), parentsConfirm(v[0])]);
+    const [pw, got] = await Promise.all([ctx.waitForEvent('page'), parentsConfirm(v[1])]);   // print: the top end
     await pw.waitForLoadState('domcontentloaded'); await pw.waitForTimeout(150);
     const pt = await pw.evaluate(() => document.body.innerText);
     printChecks++;
+    const want = got ?? v[0];
     const m = clean(pt).match(/([\d.]+)(?:–([\d.]+))?\s*מ"ל/);
-    if (!m || +m[1] !== v[0] || m[2] != null) fail(s, `print first volume "${m?.[0]}" should be one amount ${v[0]}`);
+    if (!m || +m[1] !== want || m[2] != null) fail(s, `print first volume "${m?.[0]}" should be one amount ${want}`);
+    if (got != null && (got > v[1] + 1e-9 || got < v[1] - 0.1 - 1e-9)) fail(s, `slider top end ${got} not at the range end ${v[1]}`);
     for (const bad of ['NaN', 'undefined', 'null']) if (pt.includes(bad)) fail(s, `print contains ${bad}`);
     if (!clean(pt).includes(`למשך ${s.d} ימים`)) fail(s, 'print does not show the days');
     await pw.close();
@@ -221,20 +228,23 @@ for (const [idx, s] of S.entries()) {
   }
 }
 
-// ── "הכנה להורים": one clear amount for a dose range (required) ──
+// ── "הכנה להורים": one clear amount for a dose range (required, slider within the range) ──
 {
-  const sheet = () => p.evaluate(() => ({ open: !!document.querySelector('.pp-overlay'), amount: !!document.getElementById('pp-amount'),
-    okDisabled: document.getElementById('pp-ok')?.disabled, msg: document.getElementById('pp-msg')?.textContent || '' }));
-  const typeAmount = v => p.fill('#pp-amount', String(v));
+  const sheet = () => p.evaluate(() => { const r = document.getElementById('pp-amount');
+    return { open: !!document.querySelector('.pp-overlay'), amount: !!r, min: r && +r.min, max: r && +r.max, step: r && r.step,
+      okDisabled: document.getElementById('pp-ok')?.disabled, value: document.getElementById('pp-value')?.textContent, msg: document.getElementById('pp-msg')?.textContent || '' }; });
   // 10 kg × 60–90 mg/kg/day ÷ 2 ÷ 50 mg/ml = 6–9 ml
   await setForm({ w: 10, dmin: 60, dmax: 90, n: 2, cmg: 250, cml: 5, max: 3000, d: 5 });
   if (!/6–9 מ"ל/.test(clean((await read()).vol))) failures.push('parents: the doctor\'s bubble should keep the range');
   await p.evaluate(() => { window.__shared = null; document.getElementById('share-btn').click(); });
   let c = await sheet();
-  if (!c.open || !c.amount) failures.push('parents: window/amount field missing for a range');
-  if (!c.okDisabled) failures.push('parents: send allowed without an amount');
-  await typeAmount(7.5); c = await sheet();
-  if (c.okDisabled || !/75 מ"ג\/ק"ג\/יום/.test(clean(c.msg))) failures.push('parents: 7.5 ml not accepted / mg/kg note: ' + c.msg);
+  if (!c.open || !c.amount || c.min !== 6 || c.max !== 9 || c.step !== '0.1') failures.push('parents: slider should span 6–9 in 0.1 steps: ' + JSON.stringify(c));
+  if (!c.okDisabled || c.value !== '—') failures.push('parents: send allowed before the slider was moved');
+  if (await setSlider(7.5) !== 7.5) failures.push('parents: slider did not take 7.5');
+  c = await sheet();
+  if (c.okDisabled || c.value !== '7.5' || !/375 מ"ג למנה/.test(clean(c.msg)) || !/75 מ"ג\/ק"ג\/יום/.test(clean(c.msg))) failures.push('parents: after 7.5: ' + JSON.stringify(c));
+  if (await setSlider(12) !== 9 || await setSlider(2) !== 6) failures.push('parents: slider must stay inside the calculated range');
+  await setSlider(7.5);
   await p.fill('#pp-notes', 'לתת אחרי האוכל');
   await p.click('#pp-ok');
   const sh = clean(await p.evaluate(() => window.__shared) || '');
@@ -243,23 +253,22 @@ for (const [idx, s] of S.entries()) {
   if (!/6–9 מ"ל/.test(clean((await read()).vol))) failures.push('parents: the doctor\'s bubble changed after sending');
   // print: same window, amount and notes remembered for the same result
   await p.click('#print-btn'); c = await sheet();
-  if ((await p.inputValue('#pp-amount')) !== '7.5' || (await p.inputValue('#pp-notes')) !== 'לתת אחרי האוכל') failures.push('parents: amount/notes not remembered for print');
+  if (c.value !== '7.5' || c.okDisabled || (await p.inputValue('#pp-notes')) !== 'לתת אחרי האוכל') failures.push('parents: amount/notes not remembered for print');
   const [pw] = await Promise.all([ctx.waitForEvent('page'), p.click('#pp-ok')]);
   await pw.waitForLoadState('domcontentloaded'); await pw.waitForTimeout(150);
   const pt = clean(await pw.evaluate(() => document.body.innerText)); await pw.close();
   const pm = pt.match(/([\d.]+)(?:–([\d.]+))?\s*מ"ל/);
   if (!pm || pm[1] !== '7.5' || pm[2]) failures.push('parents: print first amount ' + pm?.[0]);
-  if (!/המינון שנבחר להורים/.test(pt) || !/לתת אחרי האוכל/.test(pt)) failures.push('parents: print step / notes missing');
-  // outside the range: allowed with a warning; above the max daily dose: blocked
-  await p.click('#share-btn'); await typeAmount(10); c = await sheet();
-  if (c.okDisabled || !/מחוץ לטווח/.test(c.msg)) failures.push('parents: outside range should warn and allow: ' + c.msg);
-  await typeAmount(31); c = await sheet();   // 31 × 50 × 2 = 3100 mg > 3000
-  if (!c.okDisabled || !/מעל המקסימום/.test(c.msg)) failures.push('parents: above max should block: ' + c.msg);
-  await p.click('#pp-cancel');
+  if (!/מנה בפועל/.test(pt) || !/לתת אחרי האוכל/.test(pt)) failures.push('parents: print step "מנה בפועל" / notes missing');
   // a changed result forgets the amount, keeps the notes
   await p.fill('#ff-weight', '11');
-  await p.click('#share-btn');
-  if ((await p.inputValue('#pp-amount')) !== '' || (await p.inputValue('#pp-notes')) !== 'לתת אחרי האוכל') failures.push('parents: after a weight change amount should clear, notes stay');
+  await p.click('#share-btn'); c = await sheet();
+  if (c.value !== '—' || !c.okDisabled || (await p.inputValue('#pp-notes')) !== 'לתת אחרי האוכל') failures.push('parents: after a weight change amount should clear, notes stay');
+  await p.click('#pp-cancel');
+  // odd range ends: slider snaps inward to whole tenths (7.2–10.8 stays; 1.67–2.5 → 1.7–2.5)
+  await setForm({ w: 5, dmin: 50, dmax: 75, n: 3, cmg: 250, cml: 5, max: null, d: 5 });   // 1.67–2.5 ml
+  await p.click('#share-btn'); c = await sheet();
+  if (c.min !== 1.7 || c.max !== 2.5) failures.push('parents: odd range slider limits ' + c.min + '–' + c.max);
   await p.click('#pp-cancel');
   // single amount: no amount field, send right away
   await setForm({ w: 10, dmin: 40, dmax: null, n: 2, cmg: 250, cml: 5, max: null, d: 5 });

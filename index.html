@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261025g">
+  <link rel="stylesheet" href="style.css?v=20261025i">
   <script src="config.js?v=20261025a"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 </head>
@@ -1151,7 +1151,7 @@ function renderResultArea({
     const v = round2(amount), mg = round2(amount * concentration);
     return {
       volStr: `${v} מ"ל`, perDoseStr: `${mg} מ"ג`, roundLine: false, doctorNotes: isolateLtr(notes.trim()),
-      steps: [...allSteps, { label: `שלב ${rounding ? 'ו' : 'ה'}׳ — המינון שנבחר להורים (בחירת הקלינאי)`,
+      steps: [...allSteps, { label: `שלב ${rounding ? 'ו' : 'ה'}׳ — מנה בפועל (בחירת הקלינאי)`,
         value: `מתוך ${rng(finalMin, finalMax)} מ"ל ← ${v} מ"ל למנה (${mg} מ"ג · ${round2(amount * concentration * dosesPerDay / weight)} מ"ג/ק"ג/יום)` }],
     };
   };
@@ -1305,11 +1305,15 @@ function renderResultArea({
 }
 
 // ── "הכנה להורים": opens from send / print. For a dose range the parents need one
-// clear amount (required); outside the calculated range is allowed with a warning,
-// above the max daily dose is not. The notes written here go to the parents.
+// ── "הכנה להורים": opens from send / print. For a dose range the parents need one
+// clear amount ("מנה בפועל", required), picked with a slider limited to the
+// calculated range (whole tenths of a ml). The notes written here go to the parents.
 function openParentsSheet(kind, ctx, done) {
   const key = [ctx.finalMin, ctx.finalMax, ctx.concentration, ctx.dosesPerDay, ctx.weight, ctx.maxDailyDoseMg].join('|');
   if (parentsDraft.amountFor !== key) { parentsDraft.amount = ''; parentsDraft.amountFor = key; }   // a new result never keeps an old amount
+  // Slider limits: the calculated range, snapped inward to 0.1 ml (a range narrower than that keeps its exact ends)
+  let lo = Math.ceil(ctx.finalMin * 10 - 1e-9) / 10, hi = Math.floor(ctx.finalMax * 10 + 1e-9) / 10, step = 0.1;
+  if (lo > hi) { lo = ctx.finalMin; hi = ctx.finalMax; step = 0.01; }
   const ov = document.createElement('div');
   ov.className = 'pp-overlay';
   ov.innerHTML = `
@@ -1317,10 +1321,11 @@ function openParentsSheet(kind, ctx, done) {
       <h2 id="pp-title">👪 הכנה להורים</h2>
       ${ctx.needsAmount ? `
       <div class="pp-amount">
-        <label for="pp-amount">המינון שיינתן בכל פעם *</label>
-        <div class="ff-pair"><input type="number" id="pp-amount" min="0" step="any" inputmode="decimal"><span>מ"ל</span></div>
-        <p class="pp-hint">המינון חושב כטווח: ${rng(ctx.finalMin, ctx.finalMax)} מ"ל. להורים יישלח מספר אחד.</p>
-        <p class="pp-msg" id="pp-msg" hidden></p>
+        <label for="pp-amount">מנה בפועל *</label>
+        <div class="pp-value"><span id="pp-value">—</span> <small>מ"ל בכל פעם</small></div>
+        <input type="range" id="pp-amount" dir="ltr" min="${lo}" max="${hi}" step="${step}" value="${round2((lo + hi) / 2)}" aria-label="מנה בפועל במ&quot;ל">
+        <div class="pp-scale" dir="ltr"><span>${round2(lo)}</span><span>${round2(hi)}</span></div>
+        <p class="pp-msg" id="pp-msg">הזז את הסליידר כדי לבחור מנה בתוך הטווח המחושב (${rng(ctx.finalMin, ctx.finalMax)} מ"ל). להורים יישלח מספר אחד.</p>
       </div>` : ''}
       <label for="pp-notes">הערות / הנחיות להורים · לא חובה</label>
       <textarea id="pp-notes" rows="3" placeholder="לדוגמה: לתת אחרי האוכל..."></textarea>
@@ -1335,31 +1340,28 @@ function openParentsSheet(kind, ctx, done) {
   notes.value = parentsDraft.notes;
   notes.addEventListener('input', () => { parentsDraft.notes = notes.value; });
   const close = () => ov.remove();
-  const fmt = n => String(round2(n));
-  // → the amount to use, or null while it is missing / not allowed
+  // → the amount to use; null (no amount needed) or not ok until the slider was moved
   const check = () => {
     if (!amount) return { ok: true, amount: null };
-    parentsDraft.amount = amount.value;
-    const msg = $('pp-msg'), v = parseFloat(amount.value);
-    msg.hidden = true;
-    if (!(v > 0)) return { ok: false };
+    if (parentsDraft.amount === '') return { ok: false };
+    const v = parseFloat(parentsDraft.amount);
     const daily = v * ctx.concentration * ctx.dosesPerDay;
-    const mgkg = round2(daily / ctx.weight);
-    msg.hidden = false;
-    if (ctx.maxDailyDoseMg != null && daily > ctx.maxDailyDoseMg + 1e-9) {
+    $('pp-value').textContent = String(round2(v));
+    const msg = $('pp-msg');
+    if (ctx.maxDailyDoseMg != null && daily > ctx.maxDailyDoseMg + 1e-9) {   // cannot happen inside the range; kept as a guard
       msg.className = 'pp-msg stop';
-      msg.textContent = isolateLtr(`⛔ ${fmt(v)} מ"ל × ${ctx.dosesPerDay} = ${fmt(daily)} מ"ג ביום, מעל המקסימום היומי (${ctx.maxDailyDoseMg} מ"ג).`);
+      msg.textContent = isolateLtr(`⛔ ${round2(daily)} מ"ג ביום — מעל המקסימום היומי (${ctx.maxDailyDoseMg} מ"ג).`);
       return { ok: false };
     }
-    const outside = v < ctx.finalMin - 1e-9 || v > ctx.finalMax + 1e-9;
-    msg.className = outside ? 'pp-msg stop' : 'pp-msg';
-    msg.textContent = isolateLtr(outside
-      ? `⚠️ שים לב: ${fmt(v)} מ"ל = ${mgkg} מ"ג/ק"ג/יום, מחוץ לטווח המחושב.`
-      : `${fmt(v)} מ"ל = ${mgkg} מ"ג/ק"ג/יום.`);
+    msg.className = 'pp-msg';
+    msg.textContent = isolateLtr(`${round2(v * ctx.concentration)} מ"ג למנה · ${round2(daily / ctx.weight)} מ"ג/ק"ג/יום`);
     return { ok: true, amount: v };
   };
   const refresh = () => { ok.disabled = !check().ok; };
-  if (amount) { amount.value = parentsDraft.amount; amount.addEventListener('input', refresh); }
+  if (amount) {
+    if (parentsDraft.amount !== '') amount.value = parentsDraft.amount;
+    amount.addEventListener('input', () => { parentsDraft.amount = amount.value; refresh(); });
+  }
   refresh();
   $('pp-cancel').onclick = close;
   ov.addEventListener('click', e => { if (e.target === ov) close(); });
@@ -1369,7 +1371,6 @@ function openParentsSheet(kind, ctx, done) {
     close();
     done({ amount: c.amount, notes: parentsDraft.notes });
   };
-  (amount || notes).focus();
 }
 
 // Reset is available in every state of the result area (valid, exceeded, incomplete)
