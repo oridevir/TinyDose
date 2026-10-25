@@ -1161,22 +1161,27 @@ function renderResultArea({
     const { volStr, perDoseStr, roundLine, doctorNotes } = forParents(choice);
     // WhatsApp renders *text* as bold. One emoji per line so each line is
     // recognizable at a glance; the amount to give is the bold centerpiece.
-    const sep = '━━━━━━━━━━━━\n';
-    const shareText =
-      (patientStr ? `👤 ${patientStr}\n` : '') +
-      `💊 *${drugName}*\n` +
-      (indicationHe ? `🩺 ${freeMode ? 'אבחנה: ' : ''}${indicationHe}\n` : '') +
-      `⚖️ משקל: ${weight} ק"ג\n` +
-      sep +
-      `🥄 *לתת ${volStr} בכל פעם*\n` +
-      (roundLine ? `🔄 מעוגל · ערך מדויק: ${exactVolStr}\n` : '') +
-      `🕐 ${freqStr}\n` +
-      (durationStr ? `📅 למשך ${durationStr}\n` : '') +
-      `💉 ${perDoseStr} למנה\n` +
-      (doctorNotes ? `📝 ${doctorNotes}\n` : '') +
-      sep +
-      `*בריאות שלמה!* 💙\n` +
-      `tinydose.drdevir.com`;
+    const SEP = '━━━━━━━━━━━━';
+    // Order (Dr. Devir, 2026-10-25): who (name · ID, weight, diagnosis) — the drug and how
+    // to give it (ml + mg, times a day, days, notes) — wish and credit.
+    // Every line starts with a right-to-left mark, so WhatsApp aligns each one to the
+    // right even when it opens with an emoji, a number or Latin text.
+    const lines = [
+      patientStr && `👤 ${patientStr}`,
+      `⚖️ משקל: ${weight} ק"ג`,
+      indicationHe && `🩺 ${freeMode ? 'אבחנה: ' : ''}${indicationHe}`,
+      SEP,
+      `💊 *${drugName}*`,
+      `🥄 *לתת ${volStr} (${perDoseStr}) בכל פעם*`,
+      roundLine && `🔄 מעוגל · ערך מדויק: ${exactVolStr}`,
+      `🕐 ${freqStr}`,
+      durationStr && `📅 למשך ${durationStr}`,
+      doctorNotes && `📝 ${doctorNotes}`,
+      SEP,
+      `*בריאות שלמה!* 💙`,
+      `TinyDose · ד"ר אורי דביר · tinydose.drdevir.com`,
+    ].filter(Boolean);
+    const shareText = lines.map(l => '\u200F' + l).join('\n');
 
     if (navigator.share) {
       navigator.share({ title: 'TinyDose', text: shareText }).catch(() => {});

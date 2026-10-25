@@ -248,8 +248,13 @@ for (const [idx, s] of S.entries()) {
   await p.fill('#pp-notes', 'לתת אחרי האוכל');
   await p.click('#pp-ok');
   const sh = clean(await p.evaluate(() => window.__shared) || '');
-  if (!/לתת 7\.5 מ"ל בכל פעם/.test(sh) || /6–9/.test(sh)) failures.push('parents: WhatsApp should have only 7.5 ml: ' + sh.split('\n').find(l => l.includes('לתת')));
-  if (!/375 מ"ג למנה/.test(sh) || !/לתת אחרי האוכל/.test(sh)) failures.push('parents: WhatsApp mg per dose / notes');
+  if (!/לתת 7\.5 מ"ל \(375 מ"ג\) בכל פעם/.test(sh) || /6–9/.test(sh)) failures.push('parents: WhatsApp should have only 7.5 ml: ' + sh.split('\n').find(l => l.includes('לתת')));
+  if (!/לתת 7\.5 מ"ל \(375 מ"ג\) בכל פעם/.test(sh) || !/לתת אחרי האוכל/.test(sh)) failures.push('parents: WhatsApp mg per dose / notes');
+  // order: who → drug and how → wish; every line starts with a right-to-left mark
+  const raw = await p.evaluate(() => window.__shared);
+  if (!raw.split('\n').every(l => l.startsWith('\u200F'))) failures.push('WhatsApp: a line without the right-to-left mark');
+  const order = ['משקל', '💊', 'לתת 7', 'פעמיים ביום', 'למשך', 'לתת אחרי האוכל', 'בריאות שלמה', 'TinyDose'].map(k => sh.indexOf(k));
+  if (order.some(i => i < 0) || order.some((i, n) => n && i < order[n - 1])) failures.push('WhatsApp: line order ' + order.join(','));
   if (!/6–9 מ"ל/.test(clean((await read()).vol))) failures.push('parents: the doctor\'s bubble changed after sending');
   // print: same window, amount and notes remembered for the same result
   await p.click('#print-btn'); c = await sheet();
