@@ -660,7 +660,8 @@ function renderFreeForm() {
 
   function setProduct(prod) {
     pick.product = prod;
-    $('ff-drug').value = pick.drug.name_he + (prod ? ` (${prod.brand_name})` : '');
+    // The syrup with its concentration and units, e.g. "אמוקסיצילין (מוקסיפן 250 מ"ג/5 מ"ל)"
+    $('ff-drug').value = pick.drug.name_he + (prod ? ` (${prod.brand_name} ${prod.conc_mg} מ"ג/${prod.conc_ml} מ"ל)` : '');
     $('ff-conc-mg').value = prod ? prod.conc_mg : '';
     $('ff-conc-ml').value = prod ? prod.conc_ml : '';
   }
@@ -684,7 +685,7 @@ function renderFreeForm() {
     box.innerHTML = `
       <div class="dbp-picked-head"><span>📚 מהמאגר: <strong>${esc(isolateLtr(drug.name_he))}</strong> · ${esc(isolateLtr(indication.name_he))} · ${LINE_HE[rec.treatment_line] || ''}${rec.status === 'draft' ? ' <span class="dbp-draft">טיוטה</span>' : ''}</span>
         <button type="button" class="dbp-clear" id="dbp-clear">✕ ניקוי</button></div>
-      ${products.length > 1 ? `<div class="dbp-chips" role="group" aria-label="סירופ">${products.map(pr => `<button type="button" data-prod="${esc(pr.id)}" aria-pressed="${pr === p.product}">${esc(isolateLtr(pr.brand_name))} <span dir="ltr">${pr.conc_mg}/${pr.conc_ml}</span></button>`).join('')}</div>` : ''}
+      ${products.length > 1 ? `<div class="dbp-chips" role="group" aria-label="סירופ">${products.map(pr => `<button type="button" data-prod="${esc(pr.id)}" aria-pressed="${pr === p.product}">${esc(isolateLtr(`${pr.brand_name} ${pr.conc_mg} מ"ג/${pr.conc_ml} מ"ל`))}</button>`).join('')}</div>` : ''}
       ${products.length ? '' : '<div class="dbp-warn">⚠️ אין סירופ במאגר לתרופה הזו — יש להקליד את הריכוז.</div>'}
       ${rec.source ? `<div class="dbp-src">מקור: ${esc(isolateLtr(rec.source))}</div>` : ''}`;
     box.hidden = false;
@@ -711,7 +712,7 @@ function renderFreeForm() {
   }
 
   if (dbPickerOn) $('dbp-open').addEventListener('click', async () => {
-    const { openPicker } = await import('./db-picker.js?v=20261025b');
+    const { openPicker } = await import('./db-picker.js?v=20261025c');
     openPicker(applyPick);
   });
 
@@ -1163,7 +1164,7 @@ function renderResultArea({
     // recognizable at a glance; the amount to give is the bold centerpiece.
     const SEP = '━━━━━━━━━━━━';
     // Order (Dr. Devir, 2026-10-25): who (name · ID, weight, diagnosis) — the drug and how
-    // to give it (ml + mg, times a day, days, notes) — wish and credit.
+    // to give it (ml + mg, times a day, days, notes) — the wish (no credit line).
     // Every line starts with a right-to-left mark, so WhatsApp aligns each one to the
     // right even when it opens with an emoji, a number or Latin text.
     const lines = [
@@ -1179,7 +1180,6 @@ function renderResultArea({
       doctorNotes && `📝 ${doctorNotes}`,
       SEP,
       `*בריאות שלמה!* 💙`,
-      `TinyDose · ד"ר אורי דביר · tinydose.drdevir.com`,
     ].filter(Boolean);
     const shareText = lines.map(l => '\u200F' + l).join('\n');
 

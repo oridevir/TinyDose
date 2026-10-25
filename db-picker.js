@@ -201,7 +201,7 @@ function renderDrug(recId) {
     <div class="dbp-sec">סירופ</div>
     ${ps.length ? `<div class="dbp-syrups" role="radiogroup" aria-label="בחירת סירופ">${ps.map((p, i) => `
       <label class="dbp-syrup"><input type="radio" name="dbp-prod" value="${esc(p.id)}"${i === 0 ? ' checked' : ''}>
-        <span class="dbp-syrup-name">${t(p.brand_name)}</span><span class="dbp-syrup-conc" dir="ltr">${p.conc_mg} mg / ${p.conc_ml} ml</span></label>`).join('')}</div>`
+        <span class="dbp-syrup-name">${t(p.brand_name)}</span><span class="dbp-syrup-conc">${t(`${p.conc_mg} מ"ג/${p.conc_ml} מ"ל`)}</span></label>`).join('')}</div>`
       : '<div class="dbp-box dbp-warn">⚠️ אין סירופ במאגר לתרופה הזו — את הריכוז יש להקליד ידנית בדף החישוב.</div>'}
     ${r.source ? `<div class="dbp-src">מקור: ${t(r.source)}</div>` : ''}
     <div class="dbp-fill-bar">

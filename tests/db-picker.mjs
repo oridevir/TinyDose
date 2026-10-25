@@ -23,9 +23,9 @@ const db = {
     { id: 'd2', name_he: 'אמוקסיצילין-קלבולנט', name_en: 'Amoxicillin-Clavulanate', search_aliases: 'אוגמנטין', max_daily_dose_mg: null },
     { id: 'd3', name_he: 'אזיתרומיצין', name_en: 'Azithromycin', search_aliases: 'אזניל', max_daily_dose_mg: null },
     { id: 'd4', name_he: 'ציפרופלוקסצין', name_en: 'Ciprofloxacin', search_aliases: null, max_daily_dose_mg: null }],
-  products: [{ id: 'p1', drug_id: 'd1', brand_name: 'מוקסיפן 250', conc_mg: 250, conc_ml: 5 },
-    { id: 'p2', drug_id: 'd2', brand_name: 'אוגמנטין 400', conc_mg: 400, conc_ml: 5 }, { id: 'p3', drug_id: 'd2', brand_name: 'אוגמנטין ES 600', conc_mg: 600, conc_ml: 5 },
-    { id: 'p4', drug_id: 'd3', brand_name: 'אזניל 200', conc_mg: 200, conc_ml: 5 }],
+  products: [{ id: 'p1', drug_id: 'd1', brand_name: 'מוקסיפן', conc_mg: 250, conc_ml: 5 },
+    { id: 'p2', drug_id: 'd2', brand_name: 'אוגמנטין', conc_mg: 400, conc_ml: 5 }, { id: 'p3', drug_id: 'd2', brand_name: 'אוגמנטין ES', conc_mg: 600, conc_ml: 5 },
+    { id: 'p4', drug_id: 'd3', brand_name: 'אזניל', conc_mg: 200, conc_ml: 5 }],
   recommendations: [
     R('r1', 'i1', 'd1', 'first', 60, 90, 2, 5, 3000, { doctor_note: 'משך לפי DAG: 5–10 ימים.' }),
     R('r2', 'i1', 'd2', 'alternative', 80, null, 2, 7, null),
@@ -113,7 +113,7 @@ check(ind.indexOf('קו ראשון') < ind.indexOf('חלופה'), 'first line li
 check((await txt(p, '#dbp-crumbs')) === 'אף-אוזן-גרון › אוטיטיס מדיה', 'breadcrumbs show where you are');
 await p.click('[data-rec="r1"]');
 const det = await txt(p, '#dbp-body');
-check(det.includes('מילוי בדף החישוב') && det.includes('משך לפי DAG') && det.includes('3000') && det.includes('מוקסיפן 250'), 'drug screen: all details, note, syrup and fill button');
+check(det.includes('מילוי בדף החישוב') && det.includes('משך לפי DAG') && det.includes('3000') && det.includes('מוקסיפן') && det.includes('250 מ"ג/5 מ"ל'), 'drug screen: all details, note, syrup and fill button');
 await p.click('#dbp-back'); await p.click('#dbp-back');
 check((await txt(p, '#dbp-body')).includes('טונסיליטיס'), 'back: drug → diagnosis → category');
 await p.click('#dbp-back');
@@ -121,7 +121,7 @@ check(!!(await p.$('[data-cat]')), 'back again: categories');
 await p.click('[data-cat="c1"]'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r1"]');
 await p.click('#dbp-ok');
 check(await p.$eval('.dbp-overlay', e => e.hidden), 'window closes after confirm');
-check(await val(p, 'ff-drug') === 'אמוקסיצילין (מוקסיפן 250)', 'drug name + syrup filled');
+check(await val(p, 'ff-drug') === 'אמוקסיצילין (מוקסיפן 250 מ"ג/5 מ"ל)', 'drug name + syrup with concentration and units');
 check(await val(p, 'ff-diagnosis') === 'אוטיטיס מדיה', 'diagnosis filled');
 check(await val(p, 'ff-dose-min') === '60' && await val(p, 'ff-dose-max') === '90', 'dose range filled');
 check(await val(p, 'ff-doses') === '2', 'doses per day filled');
@@ -137,11 +137,12 @@ check((await txt(p, '#ff-live-vol')) === '—', 'no result before a weight is en
 await p.fill('#ff-weight', '10'); await p.waitForTimeout(150);
 check((await txt(p, '#ff-live-vol')).replace(/[⁦⁩]/g, '') === '6–9 מ"ל', `bubble = 6–9 ml for 10 kg (${await txt(p, '#ff-live-vol')})`);
 const rawT = await rawShare(p);
-check(rawT && rawT.includes('(מוקסיפן \u2066250\u2069)'), 'WhatsApp: numbers inside Hebrew text are LTR-isolated');
+check(rawT && rawT.includes('(מוקסיפן \u2066250\u2069 מ"ג/\u20665\u2069 מ"ל)'), 'WhatsApp: numbers inside Hebrew text are LTR-isolated');
+check(rawT && !/tinydose\.drdevir\.com|ד"ר אורי דביר/.test(rawT) && /בריאות שלמה!\* 💙$/.test(rawT), 'WhatsApp: ends with the wish, no credit line');
 const card = await p.evaluate(() => document.getElementById('ff-dnote').textContent);
 check(card.includes('\u2066DAG\u2069: \u20665–10\u2069'), 'doctor note: "DAG: 5–10" → DAG, colon, 5–10 in Hebrew reading order');
 let t = await share(p);
-check(t && t.includes('למשך 5 ימים') && t.includes('אמוקסיצילין (מוקסיפן 250)') && t.includes('אוטיטיס מדיה'), 'WhatsApp text has drug, diagnosis and duration');
+check(t && t.includes('למשך 5 ימים') && t.includes('אמוקסיצילין (מוקסיפן 250 מ"ג/5 מ"ל)') && t.includes('אוטיטיס מדיה'), 'WhatsApp text has drug, diagnosis and duration');
 await p.fill('#ff-days', '7'); await p.waitForTimeout(150);
 check((await txt(p, '#ff-live-sub')).includes('למשך 7 ימים'), 'days shown inside the result bubble');
 t = await share(p); check(t && t.includes('למשך 7 ימים'), 'edited duration flows to WhatsApp');
@@ -166,7 +167,7 @@ check((await p.$$('input[name=dbp-prod]')).length === 2, 'confirm window offers 
 await p.click('#dbp-ok'); await p.waitForTimeout(150);
 check(await parentsNotes(p) === '', 'parents\' notes cleared by the new choice');
 await p.click('[data-prod="p3"]'); await p.waitForTimeout(150);
-check(await val(p, 'ff-conc-mg') === '600' && await val(p, 'ff-drug') === 'אמוקסיצילין-קלבולנט (אוגמנטין ES 600)', 'syrup chip switches concentration and name');
+check(await val(p, 'ff-conc-mg') === '600' && await val(p, 'ff-drug') === 'אמוקסיצילין-קלבולנט (אוגמנטין ES 600 מ"ג/5 מ"ל)', 'syrup chip switches concentration and name');
 check(await val(p, 'ff-maxdaily') === '', 'no max anywhere → max field left empty');
 
 // 6. No syrup in the database → concentration left for the doctor
