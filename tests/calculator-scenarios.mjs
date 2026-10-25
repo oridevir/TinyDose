@@ -116,6 +116,12 @@ const read = () => p.evaluate(() => ({
   inputs: [...document.querySelectorAll('.ff input')].map(i => [i.id, i.value]),
 }));
 
+// Send / print open the "הכנה להורים" window: for a range, type an amount (required), then confirm
+async function parentsConfirm(amount) {
+  await p.waitForSelector('.pp-overlay #pp-ok');
+  if (await p.$('#pp-amount')) await p.fill('#pp-amount', String(amount));
+  await p.click('#pp-ok');
+}
 const failures = [];
 const fail = (s, msg) => failures.push(`${s.name} ${JSON.stringify({ w: s.w, dose: [s.dmin, s.dmax], n: s.n, days: s.d, conc: [s.cmg, s.cml], max: s.max })}\n    → ${msg}`);
 let printChecks = 0, shareChecks = 0, roundChecks = 0;
@@ -158,12 +164,15 @@ for (const [idx, s] of S.entries()) {
   // share text (every 3rd)
   if (idx % 3 === 0) {
     await p.evaluate(() => { window.__shared = null; document.getElementById('share-btn').click(); });
+    const isRange = v[0] !== v[1];
+    if (isRange !== !!(await p.$('#pp-amount'))) fail(s, `parents window: amount field ${isRange ? 'missing for a range' : 'shown for a single amount'}`);
+    await parentsConfirm(v[0]);   // parents get one amount: the low end, as typed by the "doctor"
     const t = await p.evaluate(() => window.__shared);
     shareChecks++;
     if (!t) fail(s, 'share produced no text');
     else {
       const m = clean(t).match(/לתת\s+([\d.]+)(?:–([\d.]+))?\s*מ"ל/);
-      if (!m || +m[1] !== v[0] || +(m[2] ?? m[1]) !== v[1]) fail(s, `share volume "${m?.[0]}" differs from bubble ${v.join('–')}`);
+      if (!m || +m[1] !== v[0] || m[2] != null) fail(s, `share volume "${m?.[0]}" should be one amount ${v[0]}`);
       for (const bad of ['NaN', 'undefined', 'null']) if (t.includes(bad)) fail(s, `share contains ${bad}`);
       if (!clean(t).includes(`למשך ${s.d} ימים`)) fail(s, 'share text does not show the days');
       const brs = badRanges(t); if (brs.length) fail(s, `share range without isolation: ${brs}`);
@@ -171,12 +180,13 @@ for (const [idx, s] of S.entries()) {
   }
   // print (every 12th)
   if (idx % 12 === 0) {
-    const [pw] = await Promise.all([ctx.waitForEvent('page'), p.click('#print-btn')]);
+    await p.click('#print-btn');
+    const [pw] = await Promise.all([ctx.waitForEvent('page'), parentsConfirm(v[0])]);
     await pw.waitForLoadState('domcontentloaded'); await pw.waitForTimeout(150);
     const pt = await pw.evaluate(() => document.body.innerText);
     printChecks++;
     const m = clean(pt).match(/([\d.]+)(?:–([\d.]+))?\s*מ"ל/);
-    if (!m || +m[1] !== v[0] || +(m[2] ?? m[1]) !== v[1]) fail(s, `print first volume "${m?.[0]}" differs from bubble ${v.join('–')}`);
+    if (!m || +m[1] !== v[0] || m[2] != null) fail(s, `print first volume "${m?.[0]}" should be one amount ${v[0]}`);
     for (const bad of ['NaN', 'undefined', 'null']) if (pt.includes(bad)) fail(s, `print contains ${bad}`);
     if (!clean(pt).includes(`למשך ${s.d} ימים`)) fail(s, 'print does not show the days');
     await pw.close();
@@ -211,12 +221,61 @@ for (const [idx, s] of S.entries()) {
   }
 }
 
+// ── "הכנה להורים": one clear amount for a dose range (required) ──
+{
+  const sheet = () => p.evaluate(() => ({ open: !!document.querySelector('.pp-overlay'), amount: !!document.getElementById('pp-amount'),
+    okDisabled: document.getElementById('pp-ok')?.disabled, msg: document.getElementById('pp-msg')?.textContent || '' }));
+  const typeAmount = v => p.fill('#pp-amount', String(v));
+  // 10 kg × 60–90 mg/kg/day ÷ 2 ÷ 50 mg/ml = 6–9 ml
+  await setForm({ w: 10, dmin: 60, dmax: 90, n: 2, cmg: 250, cml: 5, max: 3000, d: 5 });
+  if (!/6–9 מ"ל/.test(clean((await read()).vol))) failures.push('parents: the doctor\'s bubble should keep the range');
+  await p.evaluate(() => { window.__shared = null; document.getElementById('share-btn').click(); });
+  let c = await sheet();
+  if (!c.open || !c.amount) failures.push('parents: window/amount field missing for a range');
+  if (!c.okDisabled) failures.push('parents: send allowed without an amount');
+  await typeAmount(7.5); c = await sheet();
+  if (c.okDisabled || !/75 מ"ג\/ק"ג\/יום/.test(clean(c.msg))) failures.push('parents: 7.5 ml not accepted / mg/kg note: ' + c.msg);
+  await p.fill('#pp-notes', 'לתת אחרי האוכל');
+  await p.click('#pp-ok');
+  const sh = clean(await p.evaluate(() => window.__shared) || '');
+  if (!/לתת 7\.5 מ"ל בכל פעם/.test(sh) || /6–9/.test(sh)) failures.push('parents: WhatsApp should have only 7.5 ml: ' + sh.split('\n').find(l => l.includes('לתת')));
+  if (!/375 מ"ג למנה/.test(sh) || !/לתת אחרי האוכל/.test(sh)) failures.push('parents: WhatsApp mg per dose / notes');
+  if (!/6–9 מ"ל/.test(clean((await read()).vol))) failures.push('parents: the doctor\'s bubble changed after sending');
+  // print: same window, amount and notes remembered for the same result
+  await p.click('#print-btn'); c = await sheet();
+  if ((await p.inputValue('#pp-amount')) !== '7.5' || (await p.inputValue('#pp-notes')) !== 'לתת אחרי האוכל') failures.push('parents: amount/notes not remembered for print');
+  const [pw] = await Promise.all([ctx.waitForEvent('page'), p.click('#pp-ok')]);
+  await pw.waitForLoadState('domcontentloaded'); await pw.waitForTimeout(150);
+  const pt = clean(await pw.evaluate(() => document.body.innerText)); await pw.close();
+  const pm = pt.match(/([\d.]+)(?:–([\d.]+))?\s*מ"ל/);
+  if (!pm || pm[1] !== '7.5' || pm[2]) failures.push('parents: print first amount ' + pm?.[0]);
+  if (!/המינון שנבחר להורים/.test(pt) || !/לתת אחרי האוכל/.test(pt)) failures.push('parents: print step / notes missing');
+  // outside the range: allowed with a warning; above the max daily dose: blocked
+  await p.click('#share-btn'); await typeAmount(10); c = await sheet();
+  if (c.okDisabled || !/מחוץ לטווח/.test(c.msg)) failures.push('parents: outside range should warn and allow: ' + c.msg);
+  await typeAmount(31); c = await sheet();   // 31 × 50 × 2 = 3100 mg > 3000
+  if (!c.okDisabled || !/מעל המקסימום/.test(c.msg)) failures.push('parents: above max should block: ' + c.msg);
+  await p.click('#pp-cancel');
+  // a changed result forgets the amount, keeps the notes
+  await p.fill('#ff-weight', '11');
+  await p.click('#share-btn');
+  if ((await p.inputValue('#pp-amount')) !== '' || (await p.inputValue('#pp-notes')) !== 'לתת אחרי האוכל') failures.push('parents: after a weight change amount should clear, notes stay');
+  await p.click('#pp-cancel');
+  // single amount: no amount field, send right away
+  await setForm({ w: 10, dmin: 40, dmax: null, n: 2, cmg: 250, cml: 5, max: null, d: 5 });
+  await p.click('#share-btn'); c = await sheet();
+  if (c.amount || c.okDisabled) failures.push('parents: single amount should not ask for an amount');
+  await p.click('#pp-cancel');
+}
+
 // ── behaviour checks ──
 // notes survive a field change
 await setForm({ w: 10, dmin: 40, dmax: null, n: 2, cmg: 250, cml: 5, max: null });
-await p.fill('#doctor-notes', 'לתת אחרי האוכל');
+await p.click('#share-btn'); await p.fill('#pp-notes', 'לתת אחרי האוכל'); await p.click('#pp-cancel');
 await p.fill('#ff-dose-min', '45');
-if ((await p.inputValue('#doctor-notes')) !== 'לתת אחרי האוכל') failures.push('notes: parent notes lost after changing a field');
+await p.click('#share-btn');
+if ((await p.inputValue('#pp-notes')) !== 'לתת אחרי האוכל') failures.push('notes: parent notes lost after changing a field');
+await p.click('#pp-cancel');
 // reset clears everything
 await p.click('#reset-btn'); await p.waitForTimeout(200);
 const afterReset = await read();

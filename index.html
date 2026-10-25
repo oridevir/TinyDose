@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261025e">
+  <link rel="stylesheet" href="style.css?v=20261025g">
   <script src="config.js?v=20261025a"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 </head>
@@ -76,6 +76,11 @@ function dailyDoseSteps(weight, doseStr, calc, maxDailyDoseMg) {
 }
 
 const params = new URLSearchParams(location.search);
+// What goes to the parents, filled in the "הכנה להורים" window when sending or
+// printing: their notes (kept while fields change, pre-filled from the database)
+// and, for a dose range, the one exact amount (kept only for the same result).
+// `var`: routing below runs before any `let` further down would exist.
+var parentsDraft = { notes: '', amount: '', amountFor: '' };
 const medId = params.get('id');
 // In free-calc-only mode every entry point (including old catalog links)
 // falls back to the free calculation.
@@ -479,6 +484,7 @@ function startParallax() {
 
 // ── Free calculation flow ──
 function renderFreeForm() {
+  parentsDraft = { notes: '', amount: '', amountFor: '' };
   document.body.classList.add('ff-page');
   startParallax();
   main.innerHTML = `
@@ -646,7 +652,7 @@ function renderFreeForm() {
 
   // ── "📚 בחירה מהמאגר": fills the fields below from a chosen treatment option.
   // Never the weight. Every field stays editable; a new choice replaces the old one.
-  let pick = null;   // { rec, drug, indication, products, product, parentNotePending }
+  let pick = null;   // { rec, drug, indication, products, product }
   const ffEl = () => document.querySelector('.ff');
   const refresh = () => ffEl().dispatchEvent(new Event('input', { bubbles: true }));
   const PICK_FIELDS = ['ff-drug', 'ff-diagnosis', 'ff-dose-min', 'ff-dose-max', 'ff-doses', 'ff-days', 'ff-conc-mg', 'ff-conc-ml', 'ff-maxdaily'];
@@ -661,10 +667,9 @@ function renderFreeForm() {
 
   function applyPick(p) {
     const { rec, drug, indication, products } = p;
-    pick = { ...p, parentNotePending: rec.parent_note || '' };
+    pick = { ...p };
     PICK_FIELDS.forEach(id => { $(id).value = ''; });
-    const notes = document.getElementById('doctor-notes');
-    if (notes) notes.value = '';
+    parentsDraft = { notes: rec.parent_note || '', amount: '', amountFor: '' };
     $('ff-diagnosis').value = indication.name_he;
     $('ff-dose-min').value = rec.dose_min_mg_per_kg_day;
     if (rec.dose_max_mg_per_kg_day != null && +rec.dose_max_mg_per_kg_day !== +rec.dose_min_mg_per_kg_day) $('ff-dose-max').value = rec.dose_max_mg_per_kg_day;
@@ -697,8 +702,7 @@ function renderFreeForm() {
   function clearPick() {
     pick = null;
     PICK_FIELDS.forEach(id => { $(id).value = ''; });
-    const notes = document.getElementById('doctor-notes');
-    if (notes) notes.value = '';
+    parentsDraft = { notes: '', amount: '', amountFor: '' };
     $('dbp-picked').hidden = true;
     $('dbp-picked').innerHTML = '';
     $('ff-dnote').hidden = true;
@@ -890,17 +894,9 @@ function renderFreeForm() {
   }));
 
   // The detailed steps + share/print/reset always sit under the bubble and
-  // follow every keystroke. Doctor notes typed there survive the re-render.
+  // follow every keystroke. (Parents' notes live in parentsDraft, not here.)
   function renderDetails(f, rounding = null) {
-    const notesEl = document.getElementById('doctor-notes');
-    const notes = notesEl ? notesEl.value : '';
     renderFreeResult({ ...f, conc: f.concMg / f.concMl, scroll: false, rounding });
-    const newNotes = document.getElementById('doctor-notes');
-    if (newNotes) newNotes.value = notes;
-    if (newNotes && pick?.parentNotePending) {
-      if (!newNotes.value.trim()) newNotes.value = pick.parentNotePending;
-      pick.parentNotePending = '';
-    }
   }
 
   function showResultPlaceholder(text) {
@@ -1136,10 +1132,6 @@ function renderResultArea({
 
         ${catalogNotes ? `<div class="notes-box">📋 ${esc(catalogNotes)}</div>` : ''}
 
-        <div class="field" style="margin-top:16px;margin-bottom:0;">
-          <label for="doctor-notes">הערות / הנחיות נוספות להורים</label>
-          <textarea id="doctor-notes" rows="2" placeholder="לדוגמה: לתת אחרי האוכל..."></textarea>
-        </div>
       </div>
       <div class="result-actions">
         <button class="btn btn-sm act-share" id="share-btn">📤 שליחה</button>
@@ -1149,8 +1141,24 @@ function renderResultArea({
     </div>
   `;
 
-  document.getElementById('share-btn').addEventListener('click', () => {
-    const doctorNotes = isolateLtr(document.getElementById('doctor-notes').value.trim());
+  // Sending / printing goes through the "הכנה להורים" window: the parents get one
+  // clear amount (required when the result is a range) and the notes written there.
+  // The doctor's screen keeps the range.
+  const finalMin = rounding ? rounding.volMin : calc.volMin;
+  const finalMax = rounding ? rounding.volMax : calc.volMax;
+  const forParents = ({ amount, notes }) => {
+    if (amount == null) return { volStr, perDoseStr, roundLine: !!rounding, doctorNotes: isolateLtr(notes.trim()), steps: allSteps };
+    const v = round2(amount), mg = round2(amount * concentration);
+    return {
+      volStr: `${v} מ"ל`, perDoseStr: `${mg} מ"ג`, roundLine: false, doctorNotes: isolateLtr(notes.trim()),
+      steps: [...allSteps, { label: `שלב ${rounding ? 'ו' : 'ה'}׳ — המינון שנבחר להורים (בחירת הקלינאי)`,
+        value: `מתוך ${rng(finalMin, finalMax)} מ"ל ← ${v} מ"ל למנה (${mg} מ"ג · ${round2(amount * concentration * dosesPerDay / weight)} מ"ג/ק"ג/יום)` }],
+    };
+  };
+  const parentsCtx = { needsAmount: finalMin !== finalMax, finalMin, finalMax, concentration, dosesPerDay, weight, maxDailyDoseMg };
+
+  document.getElementById('share-btn').addEventListener('click', () => openParentsSheet('share', parentsCtx, choice => {
+    const { volStr, perDoseStr, roundLine, doctorNotes } = forParents(choice);
     // WhatsApp renders *text* as bold. One emoji per line so each line is
     // recognizable at a glance; the amount to give is the bold centerpiece.
     const sep = '━━━━━━━━━━━━\n';
@@ -1161,7 +1169,7 @@ function renderResultArea({
       `⚖️ משקל: ${weight} ק"ג\n` +
       sep +
       `🥄 *לתת ${volStr} בכל פעם*\n` +
-      (rounding ? `🔄 מעוגל · ערך מדויק: ${exactVolStr}\n` : '') +
+      (roundLine ? `🔄 מעוגל · ערך מדויק: ${exactVolStr}\n` : '') +
       `🕐 ${freqStr}\n` +
       (durationStr ? `📅 למשך ${durationStr}\n` : '') +
       `💉 ${perDoseStr} למנה\n` +
@@ -1175,10 +1183,10 @@ function renderResultArea({
     } else {
       window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
     }
-  });
+  }));
 
-  document.getElementById('print-btn').addEventListener('click', () => {
-    const doctorNotes = isolateLtr(document.getElementById('doctor-notes').value.trim());
+  document.getElementById('print-btn').addEventListener('click', () => openParentsSheet('print', parentsCtx, choice => {
+    const { volStr, perDoseStr, roundLine, doctorNotes, steps: printSteps } = forParents(choice);
 
     // Build the print document via DOM APIs (createElement/textContent) rather
     // than document.write(). Note: window.open('', '_blank') already returns a
@@ -1258,7 +1266,7 @@ function renderResultArea({
     result.appendChild(el('p', 'result-freq', freqStr));
     if (durationStr) result.appendChild(el('p', 'result-dur', `למשך ${durationStr}`));
     result.appendChild(el('p', 'result-meta', `${perDoseStr} למנה · ריכוז ${round2(concentration)} מ"ג/מ"ל`));
-    if (rounding) result.appendChild(el('p', 'result-meta', `מעוגל · ערך מדויק: ${exactVolStr}`));
+    if (roundLine) result.appendChild(el('p', 'result-meta', `מעוגל · ערך מדויק: ${exactVolStr}`));
     sheet.appendChild(result);
 
     if (doctorNotes || catalogNotes) {
@@ -1271,7 +1279,7 @@ function renderResultArea({
 
     sheet.appendChild(el('p', 'steps-title', 'פירוט החישוב'));
     const steps = el('div', 'steps');
-    allSteps.forEach(st => {
+    printSteps.forEach(st => {
       const row = el('div', 'step');
       row.appendChild(el('div', 'step-label', st.label));
       row.appendChild(el('div', 'step-value', st.value));
@@ -1289,11 +1297,79 @@ function renderResultArea({
     sheet.appendChild(footer);
 
     printWin.print();
-  });
+  }));
 
   bindReset(freeMode);
 
   if (scroll) document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── "הכנה להורים": opens from send / print. For a dose range the parents need one
+// clear amount (required); outside the calculated range is allowed with a warning,
+// above the max daily dose is not. The notes written here go to the parents.
+function openParentsSheet(kind, ctx, done) {
+  const key = [ctx.finalMin, ctx.finalMax, ctx.concentration, ctx.dosesPerDay, ctx.weight, ctx.maxDailyDoseMg].join('|');
+  if (parentsDraft.amountFor !== key) { parentsDraft.amount = ''; parentsDraft.amountFor = key; }   // a new result never keeps an old amount
+  const ov = document.createElement('div');
+  ov.className = 'pp-overlay';
+  ov.innerHTML = `
+    <div class="pp-sheet" role="dialog" aria-modal="true" aria-labelledby="pp-title">
+      <h2 id="pp-title">👪 הכנה להורים</h2>
+      ${ctx.needsAmount ? `
+      <div class="pp-amount">
+        <label for="pp-amount">המינון שיינתן בכל פעם *</label>
+        <div class="ff-pair"><input type="number" id="pp-amount" min="0" step="any" inputmode="decimal"><span>מ"ל</span></div>
+        <p class="pp-hint">המינון חושב כטווח: ${rng(ctx.finalMin, ctx.finalMax)} מ"ל. להורים יישלח מספר אחד.</p>
+        <p class="pp-msg" id="pp-msg" hidden></p>
+      </div>` : ''}
+      <label for="pp-notes">הערות / הנחיות להורים · לא חובה</label>
+      <textarea id="pp-notes" rows="3" placeholder="לדוגמה: לתת אחרי האוכל..."></textarea>
+      <div class="pp-actions">
+        <button type="button" class="btn btn-sm" id="pp-cancel">ביטול</button>
+        <button type="button" class="btn btn-sm ${kind === 'share' ? 'act-share' : 'act-print'}" id="pp-ok">${kind === 'share' ? '📤 שליחה' : '🖨️ הדפסה'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  const $ = id => ov.querySelector('#' + id);
+  const notes = $('pp-notes'), amount = $('pp-amount'), ok = $('pp-ok');
+  notes.value = parentsDraft.notes;
+  notes.addEventListener('input', () => { parentsDraft.notes = notes.value; });
+  const close = () => ov.remove();
+  const fmt = n => String(round2(n));
+  // → the amount to use, or null while it is missing / not allowed
+  const check = () => {
+    if (!amount) return { ok: true, amount: null };
+    parentsDraft.amount = amount.value;
+    const msg = $('pp-msg'), v = parseFloat(amount.value);
+    msg.hidden = true;
+    if (!(v > 0)) return { ok: false };
+    const daily = v * ctx.concentration * ctx.dosesPerDay;
+    const mgkg = round2(daily / ctx.weight);
+    msg.hidden = false;
+    if (ctx.maxDailyDoseMg != null && daily > ctx.maxDailyDoseMg + 1e-9) {
+      msg.className = 'pp-msg stop';
+      msg.textContent = isolateLtr(`⛔ ${fmt(v)} מ"ל × ${ctx.dosesPerDay} = ${fmt(daily)} מ"ג ביום, מעל המקסימום היומי (${ctx.maxDailyDoseMg} מ"ג).`);
+      return { ok: false };
+    }
+    const outside = v < ctx.finalMin - 1e-9 || v > ctx.finalMax + 1e-9;
+    msg.className = outside ? 'pp-msg stop' : 'pp-msg';
+    msg.textContent = isolateLtr(outside
+      ? `⚠️ שים לב: ${fmt(v)} מ"ל = ${mgkg} מ"ג/ק"ג/יום, מחוץ לטווח המחושב.`
+      : `${fmt(v)} מ"ל = ${mgkg} מ"ג/ק"ג/יום.`);
+    return { ok: true, amount: v };
+  };
+  const refresh = () => { ok.disabled = !check().ok; };
+  if (amount) { amount.value = parentsDraft.amount; amount.addEventListener('input', refresh); }
+  refresh();
+  $('pp-cancel').onclick = close;
+  ov.addEventListener('click', e => { if (e.target === ov) close(); });
+  ok.onclick = () => {
+    const c = check();
+    if (!c.ok) return;
+    close();
+    done({ amount: c.amount, notes: parentsDraft.notes });
+  };
+  (amount || notes).focus();
 }
 
 // Reset is available in every state of the result area (valid, exceeded, incomplete)

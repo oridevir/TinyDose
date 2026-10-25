@@ -59,7 +59,18 @@ const val = (p, id) => p.inputValue('#' + id);
 // Comparisons ignore the invisible LTR isolates (U+2066/U+2069) that keep mixed Hebrew/English in order
 const ISO = /[\u2066-\u2069]/g;
 const txt = async (p, sel) => ((await p.textContent(sel)) || '').replace(ISO, '').replace(/\s+/g, ' ').trim();
-const rawShare = async p => { await p.evaluate(() => { window.__shared = null; document.getElementById('share-btn').click(); }); return p.evaluate(() => window.__shared); };
+// Send goes through the "הכנה להורים" window; for a range type the low end as the amount
+const rawShare = async p => {
+  await p.evaluate(() => { window.__shared = null; document.getElementById('share-btn').click(); });
+  await p.waitForSelector('.pp-overlay #pp-ok');
+  if (await p.$('#pp-amount')) {
+    const low = (await p.textContent('#ff-live-vol')).replace(ISO, '').match(/[\d.]+/)[0];
+    await p.fill('#pp-amount', low);
+  }
+  await p.click('#pp-ok');
+  return p.evaluate(() => window.__shared);
+};
+const parentsNotes = async p => { await p.click('#share-btn'); const v = await p.inputValue('#pp-notes'); await p.click('#pp-cancel'); return v; };
 const share = async p => (await rawShare(p))?.replace(ISO, '');
 
 // 1. Switch off: no button, nothing from the experiment
@@ -148,7 +159,7 @@ check((await txt(p, '#dbp-body')).includes('טיוטה'), 'draft badge in confir
 await p.click('#dbp-ok'); await p.waitForTimeout(150);
 check(await val(p, 'ff-dose-max') === '', 'previous range end cleared by the new choice');
 check(await val(p, 'ff-maxdaily') === '250' && await val(p, 'ff-weight') === '40', 'new values filled, weight kept');
-check(await p.inputValue('#doctor-notes') === 'ביום הראשון של הטיפול ניתנת מנה גדולה יותר.', 'parent note placed in parents\' notes');
+check(await parentsNotes(p) === 'ביום הראשון של הטיפול ניתנת מנה גדולה יותר.', 'parent note pre-filled in the parents window');
 check((await txt(p, '#dbp-picked')).includes('טיוטה'), 'draft badge in the database panel');
 t = await share(p); check(t && t.includes('ביום הראשון'), 'parent note reaches WhatsApp');
 
@@ -156,7 +167,7 @@ t = await share(p); check(t && t.includes('ביום הראשון'), 'parent note
 await p.click('#dbp-open'); await p.fill('#dbp-q', 'אוטיטיס'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r2"]');
 check((await p.$$('input[name=dbp-prod]')).length === 2, 'confirm window offers both syrups');
 await p.click('#dbp-ok'); await p.waitForTimeout(150);
-check(await p.inputValue('#doctor-notes') === '', 'parents\' notes cleared by the new choice');
+check(await parentsNotes(p) === '', 'parents\' notes cleared by the new choice');
 await p.click('[data-prod="p3"]'); await p.waitForTimeout(150);
 check(await val(p, 'ff-conc-mg') === '600' && await val(p, 'ff-drug') === 'אמוקסיצילין-קלבולנט (אוגמנטין ES 600)', 'syrup chip switches concentration and name');
 check(await val(p, 'ff-maxdaily') === '', 'no max anywhere → max field left empty');
