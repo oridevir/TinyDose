@@ -30,6 +30,16 @@ async function load() {
   D.recsOf = id => D.recs.filter(r => r.indication_id === id && D.drug[r.drug_id]);
 }
 
+// Experiment (2026-10-26): offer only the syrups allowed for this option
+// (recommendations.allowed_product_ids; empty = all). On with ?exp=1 or window.ALLOWED_SYRUPS.
+const allowedOn = window.ALLOWED_SYRUPS === true || new URLSearchParams(location.search).get('exp') === '1';
+export function syrupsFor(rec, all) {
+  const ids = allowedOn ? rec.allowed_product_ids : null;
+  if (!ids || !ids.length) return all;
+  const ok = all.filter(p => ids.includes(p.id));
+  return ok.length ? ok : all;
+}
+
 // Daily max for an option: its own (per diagnosis) if set, else the drug's
 export function effMax(rec, drug) {
   return rec.max_daily_dose_mg != null ? +rec.max_daily_dose_mg : drug?.max_daily_dose_mg != null ? +drug.max_daily_dose_mg : null;
@@ -184,7 +194,7 @@ function renderSearch() {
 
 function renderDrug(recId) {
   const r = D.recs.find(x => x.id === recId), d = D.drug[r.drug_id], ind = D.ind[r.indication_id];
-  const ps = D.prodsOf(d.id), mx = effMax(r, d);
+  const all = D.prodsOf(d.id), ps = syrupsFor(r, all), mx = effMax(r, d);
   body(`<div class="dbp-hero">
       <div class="dbp-hero-name">${t(d.name_he)}</div>
       ${d.name_en ? `<div class="dbp-hero-en" dir="ltr">${t(d.name_en)}</div>` : ''}
@@ -203,6 +213,7 @@ function renderDrug(recId) {
       <label class="dbp-syrup"><input type="radio" name="dbp-prod" value="${esc(p.id)}"${i === 0 ? ' checked' : ''}>
         <span class="dbp-syrup-name">${t(p.brand_name)}</span><span class="dbp-syrup-conc">${t(`${p.conc_mg} מ"ג/${p.conc_ml} מ"ל`)}</span></label>`).join('')}</div>`
       : '<div class="dbp-box dbp-warn">⚠️ אין סירופ במאגר לתרופה הזו — את הריכוז יש להקליד ידנית בדף החישוב.</div>'}
+    ${ps.length < all.length ? '<div class="dbp-src">מוצגים רק הסירופים המתאימים לאבחנה הזו</div>' : ''}
     ${r.source ? `<div class="dbp-src">מקור: ${t(r.source)}</div>` : ''}
     <div class="dbp-fill-bar">
       <button type="button" class="dbp-fill" id="dbp-ok">✓ מילוי בדף החישוב</button>

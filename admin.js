@@ -101,12 +101,20 @@ function effMax(r) {
   return numOrNull(r.max_daily_dose_mg) ?? drugById(r.drug_id)?.max_daily_dose_mg ?? null;
 }
 
+// Syrups offered to the doctor for this option: the allowed ones (allowed_product_ids),
+// or all of the drug's syrups when none are marked
+function allowedProds(r) {
+  const all = prodsOf(r.drug_id), ids = r.allowed_product_ids;
+  const ok = ids?.length ? all.filter(p => ids.includes(p.id)) : [];
+  return ok.length ? ok : all;
+}
+
 function previewFor(r, weight) {
   const d = drugById(r.drug_id);
   const doseMin = +r.dose_min_mg_per_kg_day, doseMax = numOrNull(r.dose_max_mg_per_kg_day), dpd = +r.doses_per_day;
   if (!d || !(doseMin > 0) || !(dpd >= 1)) return null;
   const max = effMax(r);
-  return prodsOf(d.id).map(p => {
+  return allowedProds(r).map(p => {
     const calc = calculateDose({
       weight, doseMin, doseMax, concentration: p.conc_mg / p.conc_ml, dosesPerDay: dpd,
       maxDailyDoseMg: max, adultMaxDailyDoseMg: null,
@@ -392,7 +400,7 @@ function confirmSheet(question, onYes, yesText = 'מחיקה') {
 // ── Diagnosis screen ──
 function optCard(r, withInd = false) {
   const d = drugById(r.drug_id);
-  const ps = prodsOf(r.drug_id);
+  const ps = allowedProds(r), limited = ps.length < prodsOf(r.drug_id).length;
   return `<article class="opt">
     ${withInd ? `<div class="small">${esc(indById(r.indication_id)?.name_he)} · ${LINES[r.treatment_line]}</div>` : ''}
     <div class="opt-head">
@@ -400,7 +408,7 @@ function optCard(r, withInd = false) {
       <span class="chip ${r.status === 'verified' ? 's-verified' : 's-draft'}">${r.status === 'verified' ? '✓ מאומת' : '✎ טיוטה'}</span>
     </div>
     <div>${rng(r.dose_min_mg_per_kg_day, r.dose_max_mg_per_kg_day)} מ"ג/ק"ג/יום · ${dosesText(r.doses_per_day)}${r.duration_days ? ` · ${r.duration_days} ימים` : ''}${effMax(r) != null ? ` · מקס' ${effMax(r)} מ"ג ליום` : ''}</div>
-    <div class="opt-syrups">🧴 ${ps.length ? ps.map(p => `${esc(p.brand_name)} (${concText(p)})`).join(' · ') : '<span style="color:var(--bad-ink)">אין סירופ לתרופה</span>'}</div>
+    <div class="opt-syrups">🧴 ${ps.length ? ps.map(p => `${esc(p.brand_name)} (${concText(p)})`).join(' · ') + (limited ? ' <span class="small">(רק הסירופים שסומנו לאבחנה הזו)</span>' : '') : '<span style="color:var(--bad-ink)">אין סירופ לתרופה</span>'}</div>
     ${r.doctor_note ? `<div class="opt-note">🩺 ${esc(r.doctor_note)}</div>` : ''}
     <div class="opt-foot">
       ${r.status === 'draft' ? `<button class="btn ok" data-verify="${escRaw(r.id)}">✓ אמת</button>` : ''}
@@ -595,6 +603,7 @@ function openEditor(mode, src) {
       max_daily_dose_mg: src.max_daily_dose_mg ?? '',
       doctor_note: src.doctor_note || '', parent_note: src.parent_note || '', source: src.source || '',
       sort_order: src.sort_order ?? 0,
+      allowed_product_ids: src.allowed_product_ids?.length ? [...src.allowed_product_ids] : null,
     },
   };
   go({ type: 'editor' });
@@ -709,6 +718,9 @@ function secSyrups() {
   const ps = prodsOf(d.id);
   return `<h2>3 · סירופים</h2>
     <div class="small">הסירופים שייכים לתרופה, ולכן יופיעו בכל האבחנות שלה.</div>
+    ${ps.length > 1 ? `<div class="field"><span class="small"><strong>מוצעים לרופא באבחנה הזו:</strong> (כשכולם מסומנים — כולם מוצעים)</span>
+      ${ps.map(p => `<label class="allow-row"><input type="checkbox" data-allow="${escRaw(p.id)}"${allowedProds(E.r).includes(p) ? ' checked' : ''}> ${esc(p.brand_name)} ${p.conc_mg} מ"ג/${p.conc_ml} מ"ל</label>`).join('')}
+    </div>` : ''}
     ${ps.length ? `<div class="group">${ps.map(p => `<button type="button" class="row" data-prod="${escRaw(p.id)}"><span class="name">${esc(p.brand_name)}</span>
       <span class="meta">${p.conc_mg} מ"ג ב-${p.conc_ml} מ"ל (${round2(p.conc_mg / p.conc_ml)} מ"ג/מ"ל)</span><span class="meta">✏️</span></button>`).join('')}</div>`
       : '<div class="note-box note-warn">⚠️ לתרופה הזו עוד אין סירופ.</div>'}
@@ -733,7 +745,7 @@ function secSummary() {
       <dt>מינון</dt><dd>${rng(r.dose_min_mg_per_kg_day, r.dose_max_mg_per_kg_day)} מ"ג/ק"ג/יום</dd>
       <dt>מנות</dt><dd>${dosesText(r.doses_per_day)}${r.duration_days ? ` · ${r.duration_days} ימים` : ''}</dd>
       <dt>מקסימום יומי</dt><dd>${effMax(r) != null ? `${effMax(r)} מ"ג${r.max_daily_dose_mg !== '' ? ' (לאבחנה הזו)' : ' (של התרופה)'}` : 'לא הוגדר'}</dd>
-      <dt>סירופים</dt><dd>${prodsOf(r.drug_id).map(p => esc(p.brand_name)).join(' · ') || '—'}</dd>
+      <dt>סירופים</dt><dd>${allowedProds(r).map(p => `${esc(p.brand_name)} ${p.conc_mg}`).join(' · ') || '—'}</dd>
       ${r.source ? `<dt>מקור</dt><dd>${esc(r.source)}</dd>` : ''}
     </dl>`;
 }
@@ -797,6 +809,13 @@ function bindEditor() {
   // Section 3: syrups (sheets keep the editor state; re-render afterwards)
   const add = $('#add-syrup'); if (add) add.onclick = () => prodSheet(null, r.drug_id, () => render());
   $$('#ed-main [data-prod]').forEach(b => b.onclick = () => prodSheet(S.prods.find(p => p.id === b.dataset.prod), r.drug_id, () => render()));
+  // Which syrups are offered for this option (at least one must stay checked)
+  $$('#ed-main [data-allow]').forEach(cb => cb.onchange = () => {
+    const boxes = $$('#ed-main [data-allow]'), on = boxes.filter(b => b.checked).map(b => b.dataset.allow);
+    if (!on.length) { cb.checked = true; toast('יש להשאיר לפחות סירופ אחד'); return; }
+    r.allowed_product_ids = on.length === boxes.length ? null : on;
+    refreshPreview();
+  });
   // Delete
   const del = $('#ed-del');
   if (del) del.onclick = () => confirmSheet('למחוק את אפשרות הטיפול הזו? (התרופה והסירופים נשארים במאגר)', async () => {
@@ -819,6 +838,7 @@ async function saveEditor(status) {
     max_daily_dose_mg: numOrNull(r.max_daily_dose_mg),
     doctor_note: r.doctor_note.trim() || null, parent_note: r.parent_note.trim() || null, source: r.source.trim() || null,
     sort_order: r.sort_order, status,
+    allowed_product_ids: allowedProds(r).length < prodsOf(r.drug_id).length ? allowedProds(r).map(p => p.id) : null,
   };
   const doSave = async () => {
     const row = await saveRow('recommendations', E.id, payload);

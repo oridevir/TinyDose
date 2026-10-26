@@ -28,7 +28,7 @@ const db = {
     { id: 'p4', drug_id: 'd3', brand_name: 'אזניל', conc_mg: 200, conc_ml: 5 }],
   recommendations: [
     R('r1', 'i1', 'd1', 'first', 60, 90, 2, 5, 3000, { doctor_note: 'משך לפי DAG: 5–10 ימים.' }),
-    R('r2', 'i1', 'd2', 'alternative', 80, null, 2, 7, null),
+    R('r2', 'i1', 'd2', 'alternative', 80, null, 2, 7, null, { allowed_product_ids: ['p3'] }),
     R('r3', 'i2', 'd3', 'allergy', 6, null, 1, 5, 250, { parent_note: 'ביום הראשון של הטיפול ניתנת מנה גדולה יותר.', status: 'draft' }),
     R('r4', 'i2', 'd1', 'first', 50, null, 2, 10, 1000),
     R('r5', 'i4', 'd4', 'alternative', 30, null, 2, 3, 1000),
@@ -202,6 +202,24 @@ check(kb.b <= kb.h, `search: first result visible above the keyboard (${JSON.str
 // Experiment page: title right above the calculation details; clouds button in the footer
 p = await page('https://tinydose.test/?db=1');
 check(await p.evaluate(() => { const t = document.querySelector('.ff-calc-title'); return !!t && t.nextElementSibling?.id === 'result-area' && t.textContent.includes('פירוט חישוב המינון'); }), 'experiment page: "פירוט חישוב המינון" title above the details');
+
+// 10. Allowed syrups per option (experiment ?exp=1): r2 allows only Augmentin ES
+for (const [url, exp] of [['https://tinydose.test/?db=1', false], ['https://tinydose.test/?db=1&exp=1', true]]) {
+  p = await page(url);
+  await p.click('#dbp-open'); await p.click('[data-cat="c1"]'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r2"]');
+  const radios = await p.$$eval('input[name=dbp-prod]', a => a.map(x => x.value));
+  const note = (await txt(p, '#dbp-body')).includes('מוצגים רק הסירופים המתאימים');
+  if (exp) check(radios.join() === 'p3' && note, `?exp=1: only the allowed syrup offered (${radios})`);
+  else check(radios.length === 2 && !note, `without ?exp=1: all syrups as before (${radios})`);
+  await p.click('#dbp-ok'); await p.waitForTimeout(100);
+  const chips = await p.$$eval('#dbp-picked [data-prod]', a => a.map(x => x.dataset.prod));
+  if (exp) check(chips.length === 0 && (await val(p, 'ff-drug')).includes('אוגמנטין ES') && await val(p, 'ff-conc-mg') === '600', `?exp=1: filled with ES, no switch to other syrups (${chips})`);
+  else check(chips.length === 2, 'without ?exp=1: both syrup buttons in the panel');
+}
+// An option whose allowed syrups list is empty or unknown still offers all
+p = await page('https://tinydose.test/?db=1&exp=1');
+await p.click('#dbp-open'); await p.click('[data-cat="c1"]'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r1"]');
+check((await p.$$('input[name=dbp-prod]')).length === 1, '?exp=1: option without a list offers all its syrups');
 
 // 9. Desktop layout
 p = await page('https://tinydose.test/?db=1', { width: 1280, height: 900 });

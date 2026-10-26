@@ -106,6 +106,21 @@ await p.click('#save-draft'); await p.waitForTimeout(300);
 const savedMax = db.recommendations[db.recommendations.length-1].max_daily_dose_mg;
 console.log('desk saved:', db.recommendations.length, 'own max:', savedMax);
 if (savedMax !== 1000) errs.push('per-diagnosis max not saved: '+savedMax);
+// Allowed syrups per option: with two syrups, uncheck one → saved list, preview and card show only the other
+db.products.push({id:'p2',drug_id:'d1',brand_name:'מוקסיפן פורטה',conc_mg:500,conc_ml:5,updated_at:now});
+await p.goto('https://tinydose.test/admin.html'); await p.waitForSelector('#home-body');
+await p.click('[data-ind="i1"]'); await p.click('[data-edit="r1"]'); await p.waitForSelector('[data-allow]');
+const allowBoxes = await p.$$eval('[data-allow]', a=>a.map(x=>x.checked)); console.log('allow boxes:', allowBoxes);
+if (allowBoxes.join() !== 'true,true') errs.push('allow: all syrups should start checked');
+await p.click('[data-allow="p1"]');
+const pvAllow = await txt(p,'#ed-pv'); if (pvAllow.includes('מוקסיפן 250') || !pvAllow.includes('מוקסיפן פורטה')) errs.push('allow: preview not limited: '+pvAllow.slice(0,120));
+await p.click('[data-allow="p2"]'); if (!(await p.$eval('[data-allow="p2"]', x=>x.checked))) errs.push('allow: last syrup could be unchecked');
+await p.click('#save-draft'); await p.waitForTimeout(300);
+const r1 = db.recommendations.find(r=>r.id==='r1'); console.log('allowed saved:', r1.allowed_product_ids);
+if (JSON.stringify(r1.allowed_product_ids) !== '["p2"]') errs.push('allow: not saved: '+JSON.stringify(r1.allowed_product_ids));
+const card = await txt(p,'#screen'); if (!card.includes('רק הסירופים שסומנו')) errs.push('allow: card does not say the list is limited');
+await p.click('[data-edit="r1"]'); await p.waitForSelector('[data-allow]'); await p.click('[data-allow="p1"]'); await p.click('#save-draft'); await p.waitForTimeout(300);
+if (r1.allowed_product_ids !== null) errs.push('allow: all checked should save null: '+JSON.stringify(r1.allowed_product_ids));
 // calculator still OK
 const c = await ctx.newPage(); c.on('pageerror',e=>errs.push('calc '+e.message));
 await c.goto('https://tinydose.test/'); await c.waitForSelector('#ff-weight');
