@@ -1,6 +1,6 @@
 // Admin screen flows (admin.html) on phone and desktop, against an in-memory mock of
-// Supabase — the real database is never touched. Also smoke-tests the calculator and
-// the admin-old.html backup. Run:  node tests/admin-flows.mjs   (see tests/README.md)
+// Supabase — the real database is never touched. Also smoke-tests the calculator.
+// Run:  node tests/admin-flows.mjs   (see tests/README.md)
 import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = process.env.ROOT || path.resolve(HERE, '..');
@@ -111,7 +111,5 @@ const c = await ctx.newPage(); c.on('pageerror',e=>errs.push('calc '+e.message))
 await c.goto('https://tinydose.test/'); await c.waitForSelector('#ff-weight');
 await c.fill('#ff-weight','10'); await c.fill('#ff-dose-min','50'); await c.fill('#ff-doses','2'); await c.fill('#ff-days','7'); await c.fill('#ff-conc-mg','250'); await c.fill('#ff-conc-ml','5'); await c.waitForTimeout(300);
 console.log('calc:', await c.textContent('#ff-live-vol'));
-// old admin backup loads
-const o = await ctx.newPage(); o.on('pageerror',e=>errs.push('old '+e.message)); await o.goto('https://tinydose.test/admin-old.html'); await o.waitForSelector('#admin-app:not(.hidden)'); console.log('old admin ok:', await o.title());
 console.log('ERRORS', errs); await b.close();
 process.exitCode = errs.length ? 1 : 0;
