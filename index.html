@@ -533,7 +533,7 @@ function renderFreeForm() {
         </div>
       </div>
       <div class="ff-pill ff-green">
-        <label for="ff-conc-mg">ריכוז הסירופ *</label>
+        <label for="ff-conc-mg">ריכוז התכשיר *</label>
         <div class="ff-pair">
           <input type="number" id="ff-conc-mg" min="0" step="any" inputmode="decimal" aria-label="מ&quot;ג">
           <span>מ"ג ב־</span>
@@ -685,8 +685,8 @@ function renderFreeForm() {
     box.innerHTML = `
       <div class="dbp-picked-head"><span>📚 מהמאגר: <strong>${esc(isolateLtr(drug.name_he))}</strong> · ${esc(isolateLtr(indication.name_he))} · ${LINE_HE[rec.treatment_line] || ''}${rec.status === 'draft' ? ' <span class="dbp-draft">טיוטה</span>' : ''}</span>
         <button type="button" class="dbp-clear" id="dbp-clear">✕ ניקוי</button></div>
-      ${products.length > 1 ? `<div class="dbp-chips" role="group" aria-label="סירופ">${products.map(pr => `<button type="button" data-prod="${esc(pr.id)}" aria-pressed="${pr === p.product}">${esc(isolateLtr(`${pr.brand_name} ${pr.conc_mg} מ"ג/${pr.conc_ml} מ"ל`))}</button>`).join('')}</div>` : ''}
-      ${products.length ? '' : '<div class="dbp-warn">⚠️ אין סירופ במאגר לתרופה הזו — יש להקליד את הריכוז.</div>'}
+      ${products.length > 1 ? `<div class="dbp-chips" role="group" aria-label="תכשיר">${products.map(pr => `<button type="button" data-prod="${esc(pr.id)}" aria-pressed="${pr === p.product}">${esc(isolateLtr(`${pr.brand_name} ${pr.conc_mg} מ"ג/${pr.conc_ml} מ"ל`))}</button>`).join('')}</div>` : ''}
+      ${products.length ? '' : '<div class="dbp-warn">⚠️ אין תכשיר במאגר לתרופה הזו — יש להקליד את הריכוז.</div>'}
       ${rec.source ? `<div class="dbp-src">מקור: ${esc(isolateLtr(rec.source))}</div>` : ''}`;
     box.hidden = false;
     $('dbp-clear').onclick = clearPick;
@@ -712,7 +712,7 @@ function renderFreeForm() {
   }
 
   if (dbPickerOn) $('dbp-open').addEventListener('click', async () => {
-    const { openPicker } = await import('./db-picker.js?v=20261026a');
+    const { openPicker } = await import('./db-picker.js?v=20261026b');
     openPicker(applyPick);
   });
 

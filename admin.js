@@ -133,7 +133,7 @@ function previewFor(r, weight) {
 function previewHtml(r, extraWeight) {
   const d = drugById(r.drug_id);
   if (!d) return '<div class="small">בחר תרופה כדי לראות תצוגה מקדימה.</div>';
-  if (!prodsOf(d.id).length) return '<div class="note-box note-warn">⚠️ לתרופה הזו אין עדיין סירופ — אי אפשר לחשב נפח.</div>';
+  if (!prodsOf(d.id).length) return '<div class="note-box note-warn">⚠️ לתרופה הזו אין עדיין תכשיר — אי אפשר לחשב נפח.</div>';
   if (!(+r.dose_min_mg_per_kg_day > 0) || !(+r.doses_per_day >= 1)) return '<div class="small">מלא מינון ומנות ביום כדי לראות תצוגה מקדימה.</div>';
   const weights = [...PREVIEW_WEIGHTS];
   if (+extraWeight > 0 && !weights.includes(+extraWeight)) weights.push(+extraWeight);
@@ -161,7 +161,7 @@ function verifyChecklist(r, onConfirm) {
   const problems = previewProblems(r);
   const items = [
     { ok: !!(r.source || '').trim(), text: 'יש מקור' },
-    { ok: prodsOf(r.drug_id).length > 0, text: 'יש לפחות סירופ אחד' },
+    { ok: prodsOf(r.drug_id).length > 0, text: 'יש לפחות תכשיר אחד' },
     { ok: effMax(r) != null, text: 'הוגדר מקסימום יומי (לאבחנה או לתרופה)' },
     { ok: !problems.length, text: problems.length ? `תצוגה מקדימה (5/10/20 ק"ג): ${problems.join(' · ')}` : 'התצוגה המקדימה (5/10/20 ק"ג) תקינה' },
   ];
@@ -249,7 +249,7 @@ function computeIssues() {
       out.push({ text: `${i.name_he}: אין קו ראשון`, go: { type: 'ind', id: i.id } });
   }
   for (const d of S.drugs) {
-    if (!prodsOf(d.id).length) out.push({ text: `${d.name_he}: אין סירופ`, go: { type: 'drug', id: d.id } });
+    if (!prodsOf(d.id).length) out.push({ text: `${d.name_he}: אין תכשיר`, go: { type: 'drug', id: d.id } });
     if (d.max_daily_dose_mg == null && S.recs.some(r => r.drug_id === d.id && r.max_daily_dose_mg == null)) out.push({ text: `${d.name_he}: לא הוגדר מקסימום יומי`, go: { type: 'drug', id: d.id } });
   }
   return out;
@@ -298,7 +298,7 @@ function homeBody() {
       ${inds.length ? `<div class="section-label">אבחנות</div><div class="group">${inds.map(indRow).join('')}</div>` : ''}
       ${drugs.length ? `<div class="section-label">תרופות</div><div class="group">${drugs.map(d => `
         <button class="row" data-drug="${escRaw(d.id)}"><span class="name">${esc(d.name_he)}
-          <div class="small">${prodsOf(d.id).map(p => esc(p.brand_name)).join(' · ') || 'אין סירופים'}</div></span><span class="meta" aria-hidden="true">‹</span></button>`).join('')}</div>` : ''}
+          <div class="small">${prodsOf(d.id).map(p => esc(p.brand_name)).join(' · ') || 'אין תכשירים'}</div></span><span class="meta" aria-hidden="true">‹</span></button>`).join('')}</div>` : ''}
       ${!inds.length && !drugs.length ? `<div class="empty">לא נמצא דבר עבור "${esc(homeQuery.trim())}"</div>` : ''}
       <button class="btn ghost" id="new-drug-search">+ תרופה חדשה</button>`;
     $('#new-drug-search').onclick = () => drugSheet(null, d => go({ type: 'drug', id: d.id }), homeQuery.trim());
@@ -408,7 +408,7 @@ function optCard(r, withInd = false) {
       <span class="chip ${r.status === 'verified' ? 's-verified' : 's-draft'}">${r.status === 'verified' ? '✓ מאומת' : '✎ טיוטה'}</span>
     </div>
     <div>${rng(r.dose_min_mg_per_kg_day, r.dose_max_mg_per_kg_day)} מ"ג/ק"ג/יום · ${dosesText(r.doses_per_day)}${r.duration_days ? ` · ${r.duration_days} ימים` : ''}${effMax(r) != null ? ` · מקס' ${effMax(r)} מ"ג ליום` : ''}</div>
-    <div class="opt-syrups">🧴 ${ps.length ? ps.map(p => `${esc(p.brand_name)} (${concText(p)})`).join(' · ') + (limited ? ' <span class="small">(רק הסירופים שסומנו לאבחנה הזו)</span>' : '') : '<span style="color:var(--bad-ink)">אין סירופ לתרופה</span>'}</div>
+    <div class="opt-syrups">🧴 ${ps.length ? ps.map(p => `${esc(p.brand_name)} (${concText(p)})`).join(' · ') + (limited ? ' <span class="small">(רק התכשירים שסומנו לאבחנה הזו)</span>' : '') : '<span style="color:var(--bad-ink)">אין תכשיר לתרופה</span>'}</div>
     ${r.doctor_note ? `<div class="opt-note">🩺 ${esc(r.doctor_note)}</div>` : ''}
     <div class="opt-foot">
       ${r.status === 'draft' ? `<button class="btn ok" data-verify="${escRaw(r.id)}">✓ אמת</button>` : ''}
@@ -483,12 +483,12 @@ function renderDrug(v) {
         ${d.search_aliases ? `<div class="small">שמות נוספים: ${esc(d.search_aliases)}</div>` : ''}
         <div class="small">עודכן ${fmtDate(d.updated_at)}</div>
       </div>
-      <div class="section-label">סירופים</div>
+      <div class="section-label">תכשירים</div>
       <div class="group">
         ${ps.map(p => `<button class="row" data-prod="${escRaw(p.id)}"><span class="name">${esc(p.brand_name)}
           ${p.brand_name_en || p.search_aliases ? `<div class="small">${esc([p.brand_name_en, p.search_aliases].filter(Boolean).join(' · '))}</div>` : ''}</span>
           <span class="meta">${p.conc_mg} מ"ג ב-${p.conc_ml} מ"ל</span><span class="meta">✏️</span></button>`).join('')}
-        <button class="row add" id="add-prod">+ סירופ חדש</button>
+        <button class="row add" id="add-prod">+ תכשיר חדש</button>
       </div>
       <div class="section-label">מופיעה באבחנות</div>
       <div class="group">
@@ -549,7 +549,7 @@ function drugSheet(d, onSaved, prefill = '') {
 function prodSheet(p, drugId, onSaved) {
   const d = drugById(drugId);
   const el = sheet(`
-    <h2>${p ? 'עריכת סירופ' : 'סירופ חדש'} · ${esc(d?.name_he)}</h2>
+    <h2>${p ? 'עריכת תכשיר' : 'תכשיר חדש'} · ${esc(d?.name_he)}</h2>
     <div class="field"><label for="ps-he">שם מסחרי (עברית) *</label><input id="ps-he" value="${escRaw(p?.brand_name)}" placeholder="לדוגמה: מוקסיפן 250"></div>
     <div class="field"><label for="ps-en">שם מסחרי (אנגלית)</label><input id="ps-en" dir="ltr" value="${escRaw(p?.brand_name_en)}"></div>
     <div class="field"><label for="ps-alias">שמות נוספים לחיפוש (מופרדים בפסיק)</label><input id="ps-alias" value="${escRaw(p?.search_aliases)}"></div>
@@ -561,7 +561,7 @@ function prodSheet(p, drugId, onSaved) {
     <div class="small" id="ps-res"></div>
     <div class="field"><label for="ps-note">הערה להורים (הכנה, שמירה)</label><textarea id="ps-note" rows="2">${escRaw(p?.parent_note)}</textarea></div>
     <div class="sheet-actions"><button class="btn" data-close>ביטול</button><button class="btn primary" id="ps-save">שמירה</button></div>
-    ${p ? '<button class="btn danger" id="ps-del">מחיקת הסירופ</button>' : ''}`);
+    ${p ? '<button class="btn danger" id="ps-del">מחיקת התכשיר</button>' : ''}`);
   const res = () => {
     const mg = +$('#ps-mg').value, ml = +$('#ps-ml').value;
     $('#ps-res').textContent = mg > 0 && ml > 0 ? `= ${round2(mg / ml)} מ"ג למ"ל` : '';
@@ -582,13 +582,13 @@ function prodSheet(p, drugId, onSaved) {
     closeSheet(); await loadAll(); toast('נשמר ✓'); onSaved(row);
   };
   const del = $('#ps-del');
-  if (del) del.onclick = () => confirmSheet(`למחוק את הסירופ "${p.brand_name}"?`, async () => {
+  if (del) del.onclick = () => confirmSheet(`למחוק את התכשיר "${p.brand_name}"?`, async () => {
     if (await deleteRow('products', p.id, 'לא ניתן למחוק')) { await loadAll(); toast('נמחק'); onSaved(null); }
   });
 }
 
 // ── Treatment-option editor ──
-const SECTIONS = ['תרופה', 'מינון', 'סירופים', 'הערות ומקור', 'סיכום'];
+const SECTIONS = ['תרופה', 'מינון', 'תכשירים', 'הערות ומקור', 'סיכום'];
 let E = null;
 
 function openEditor(mode, src) {
@@ -714,17 +714,18 @@ function secDose() {
 
 function secSyrups() {
   const d = drugById(E.r.drug_id);
-  if (!d) return '<h2>3 · סירופים</h2><div class="small">בחר קודם תרופה.</div>';
-  const ps = prodsOf(d.id);
-  return `<h2>3 · סירופים</h2>
-    <div class="small">הסירופים שייכים לתרופה, ולכן יופיעו בכל האבחנות שלה.</div>
-    ${ps.length > 1 ? `<div class="field"><span class="small"><strong>מוצעים לרופא באבחנה הזו:</strong> (כשכולם מסומנים — כולם מוצעים)</span>
-      ${ps.map(p => `<label class="allow-row"><input type="checkbox" data-allow="${escRaw(p.id)}"${allowedProds(E.r).includes(p) ? ' checked' : ''}> ${esc(p.brand_name)} ${p.conc_mg} מ"ג/${p.conc_ml} מ"ל</label>`).join('')}
-    </div>` : ''}
-    ${ps.length ? `<div class="group">${ps.map(p => `<button type="button" class="row" data-prod="${escRaw(p.id)}"><span class="name">${esc(p.brand_name)}</span>
-      <span class="meta">${p.conc_mg} מ"ג ב-${p.conc_ml} מ"ל (${round2(p.conc_mg / p.conc_ml)} מ"ג/מ"ל)</span><span class="meta">✏️</span></button>`).join('')}</div>`
-      : '<div class="note-box note-warn">⚠️ לתרופה הזו עוד אין סירופ.</div>'}
-    <button type="button" class="btn ghost" id="add-syrup" style="align-self:flex-start">+ סירופ חדש</button>`;
+  if (!d) return '<h2>3 · תכשירים</h2><div class="small">בחר קודם תרופה.</div>';
+  const ps = prodsOf(d.id), pick = ps.length > 1, allowed = allowedProds(E.r);
+  // One list: (checkbox: offered for this diagnosis) · name and concentration · ✏️ edit the preparation itself
+  return `<h2>3 · תכשירים</h2>
+    <div class="small">${pick ? 'סמן אילו תכשירים יוצעו לרופא באבחנה הזו. ' : ''}עריכה (✏️) משנה את התכשיר בכל האבחנות של התרופה.</div>
+    ${ps.length ? `<div class="group">${ps.map(p => `<div class="row syr-row">
+      ${pick ? `<input type="checkbox" data-allow="${escRaw(p.id)}" id="al-${escRaw(p.id)}"${allowed.includes(p) ? ' checked' : ''}>` : ''}
+      <label class="name" ${pick ? `for="al-${escRaw(p.id)}"` : ''}>${esc(`${p.brand_name} ${p.conc_mg} מ"ג/${p.conc_ml} מ"ל`)}
+        <span class="meta">(${round2(p.conc_mg / p.conc_ml)} מ"ג/מ"ל)</span></label>
+      <button type="button" class="iconbtn" data-prod="${escRaw(p.id)}" aria-label="עריכת התכשיר">✏️</button></div>`).join('')}</div>`
+      : '<div class="note-box note-warn">⚠️ לתרופה הזו עוד אין תכשיר.</div>'}
+    <button type="button" class="btn ghost" id="add-syrup" style="align-self:flex-start">+ תכשיר חדש</button>`;
 }
 
 function secNotes() {
@@ -745,7 +746,7 @@ function secSummary() {
       <dt>מינון</dt><dd>${rng(r.dose_min_mg_per_kg_day, r.dose_max_mg_per_kg_day)} מ"ג/ק"ג/יום</dd>
       <dt>מנות</dt><dd>${dosesText(r.doses_per_day)}${r.duration_days ? ` · ${r.duration_days} ימים` : ''}</dd>
       <dt>מקסימום יומי</dt><dd>${effMax(r) != null ? `${effMax(r)} מ"ג${r.max_daily_dose_mg !== '' ? ' (לאבחנה הזו)' : ' (של התרופה)'}` : 'לא הוגדר'}</dd>
-      <dt>סירופים</dt><dd>${allowedProds(r).map(p => `${esc(p.brand_name)} ${p.conc_mg}`).join(' · ') || '—'}</dd>
+      <dt>תכשירים</dt><dd>${allowedProds(r).map(p => `${esc(p.brand_name)} ${p.conc_mg}`).join(' · ') || '—'}</dd>
       ${r.source ? `<dt>מקור</dt><dd>${esc(r.source)}</dd>` : ''}
     </dl>`;
 }
@@ -774,7 +775,7 @@ function bindEditor() {
       $('#drug-picks').innerHTML = ds.map(d => `
         <button type="button" class="pick" data-pick="${escRaw(d.id)}"><span class="check">✓</span>
           <span class="name">${esc(d.name_he)}${d.name_en ? `<br><span class="small" dir="ltr">${esc(d.name_en)}</span>` : ''}</span>
-          <span class="small">${plural(prodsOf(d.id).length, 'סירופ אחד', 'סירופים')}</span></button>`).join('')
+          <span class="small">${plural(prodsOf(d.id).length, 'תכשיר אחד', 'תכשירים')}</span></button>`).join('')
         || '<div class="small">לא נמצאה תרופה. אפשר להוסיף חדשה.</div>';
       $$('#drug-picks [data-pick]').forEach(b => b.onclick = () => { r.drug_id = b.dataset.pick; render(); });
     };
@@ -812,13 +813,13 @@ function bindEditor() {
   // Which syrups are offered for this option (at least one must stay checked)
   $$('#ed-main [data-allow]').forEach(cb => cb.onchange = () => {
     const boxes = $$('#ed-main [data-allow]'), on = boxes.filter(b => b.checked).map(b => b.dataset.allow);
-    if (!on.length) { cb.checked = true; toast('יש להשאיר לפחות סירופ אחד'); return; }
+    if (!on.length) { cb.checked = true; toast('יש להשאיר לפחות תכשיר אחד'); return; }
     r.allowed_product_ids = on.length === boxes.length ? null : on;
     refreshPreview();
   });
   // Delete
   const del = $('#ed-del');
-  if (del) del.onclick = () => confirmSheet('למחוק את אפשרות הטיפול הזו? (התרופה והסירופים נשארים במאגר)', async () => {
+  if (del) del.onclick = () => confirmSheet('למחוק את אפשרות הטיפול הזו? (התרופה והתכשירים נשארים במאגר)', async () => {
     if (await deleteRow('recommendations', E.id, 'לא ניתן למחוק')) { await loadAll(); toast('נמחק'); back(); }
   });
   // Enter → next field; on the last field of a phone step → next step

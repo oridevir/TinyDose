@@ -208,12 +208,12 @@ function renderDrug(recId) {
     </div>
     ${r.doctor_note ? `<div class="dbp-box dbp-dnote">🩺 <strong>הערה לרופא:</strong> ${t(r.doctor_note)}</div>` : ''}
     ${r.parent_note ? `<div class="dbp-box dbp-pnote">👪 <strong>הערה להורים</strong> (תעבור לתדפיס ולשליחה): ${t(r.parent_note)}</div>` : ''}
-    <div class="dbp-sec">סירופ</div>
-    ${ps.length ? `<div class="dbp-syrups" role="radiogroup" aria-label="בחירת סירופ">${ps.map((p, i) => `
+    <div class="dbp-sec">תכשיר</div>
+    ${ps.length ? `<div class="dbp-syrups" role="radiogroup" aria-label="בחירת תכשיר">${ps.map((p, i) => `
       <label class="dbp-syrup"><input type="radio" name="dbp-prod" value="${esc(p.id)}"${i === 0 ? ' checked' : ''}>
         <span class="dbp-syrup-name">${t(p.brand_name)}</span><span class="dbp-syrup-conc">${t(`${p.conc_mg} מ"ג/${p.conc_ml} מ"ל`)}</span></label>`).join('')}</div>`
-      : '<div class="dbp-box dbp-warn">⚠️ אין סירופ במאגר לתרופה הזו — את הריכוז יש להקליד ידנית בדף החישוב.</div>'}
-    ${ps.length < all.length ? '<div class="dbp-src">מוצגים רק הסירופים המתאימים לאבחנה הזו</div>' : ''}
+      : '<div class="dbp-box dbp-warn">⚠️ אין תכשיר במאגר לתרופה הזו — את הריכוז יש להקליד ידנית בדף החישוב.</div>'}
+    ${ps.length < all.length ? '<div class="dbp-src">מוצגים רק התכשירים המתאימים לאבחנה הזו</div>' : ''}
     ${r.source ? `<div class="dbp-src">מקור: ${t(r.source)}</div>` : ''}
     <div class="dbp-fill-bar">
       <button type="button" class="dbp-fill" id="dbp-ok">✓ מילוי בדף החישוב</button>

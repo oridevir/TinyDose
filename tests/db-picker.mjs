@@ -172,7 +172,7 @@ check(await val(p, 'ff-maxdaily') === '', 'no max anywhere → max field left em
 
 // 6. No syrup in the database → concentration left for the doctor
 await p.click('#dbp-open'); await p.fill('#dbp-q', 'ציפרו'); await p.click('[data-rec="r5"]');
-check((await txt(p, '#dbp-body')).includes('אין סירופ'), 'confirm window warns: no syrup');
+check((await txt(p, '#dbp-body')).includes('אין תכשיר'), 'confirm window warns: no syrup');
 await p.click('#dbp-ok'); await p.waitForTimeout(150);
 check(await val(p, 'ff-conc-mg') === '' && (await txt(p, '#dbp-picked')).includes('יש להקליד את הריכוז'), 'concentration empty + warning');
 check((await txt(p, '#ff-live-vol')) === '—', 'no result until a concentration is typed');
@@ -208,7 +208,7 @@ for (const [url, exp] of [['https://tinydose.test/?db=1', false], ['https://tiny
   p = await page(url);
   await p.click('#dbp-open'); await p.click('[data-cat="c1"]'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r2"]');
   const radios = await p.$$eval('input[name=dbp-prod]', a => a.map(x => x.value));
-  const note = (await txt(p, '#dbp-body')).includes('מוצגים רק הסירופים המתאימים');
+  const note = (await txt(p, '#dbp-body')).includes('מוצגים רק התכשירים המתאימים');
   if (exp) check(radios.join() === 'p3' && note, `?exp=1: only the allowed syrup offered (${radios})`);
   else check(radios.length === 2 && !note, `without ?exp=1: all syrups as before (${radios})`);
   await p.click('#dbp-ok'); await p.waitForTimeout(100);

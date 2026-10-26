@@ -118,7 +118,7 @@ await p.click('[data-allow="p2"]'); if (!(await p.$eval('[data-allow="p2"]', x=>
 await p.click('#save-draft'); await p.waitForTimeout(300);
 const r1 = db.recommendations.find(r=>r.id==='r1'); console.log('allowed saved:', r1.allowed_product_ids);
 if (JSON.stringify(r1.allowed_product_ids) !== '["p2"]') errs.push('allow: not saved: '+JSON.stringify(r1.allowed_product_ids));
-const card = await txt(p,'#screen'); if (!card.includes('רק הסירופים שסומנו')) errs.push('allow: card does not say the list is limited');
+const card = await txt(p,'#screen'); if (!card.includes('רק התכשירים שסומנו')) errs.push('allow: card does not say the list is limited');
 await p.click('[data-edit="r1"]'); await p.waitForSelector('[data-allow]'); await p.click('[data-allow="p1"]'); await p.click('#save-draft'); await p.waitForTimeout(300);
 if (r1.allowed_product_ids !== null) errs.push('allow: all checked should save null: '+JSON.stringify(r1.allowed_product_ids));
 // calculator still OK
