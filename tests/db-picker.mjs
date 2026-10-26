@@ -28,21 +28,25 @@ const db = {
     { id: 'p4', drug_id: 'd3', brand_name: 'אזניל', conc_mg: 200, conc_ml: 5 }],
   recommendations: [
     R('r1', 'i1', 'd1', 'first', 60, 90, 2, 5, 3000, { doctor_note: 'משך לפי DAG: 5–10 ימים.' }),
-    R('r2', 'i1', 'd2', 'alternative', 80, null, 2, 7, null, { allowed_product_ids: ['p3'] }),
+    R('r2', 'i1', 'd2', 'alternative', 80, null, 2, 7, null),
     R('r3', 'i2', 'd3', 'allergy', 6, null, 1, 5, 250, { parent_note: 'ביום הראשון של הטיפול ניתנת מנה גדולה יותר.', status: 'draft' }),
     R('r4', 'i2', 'd1', 'first', 50, null, 2, 10, 1000),
     R('r5', 'i4', 'd4', 'alternative', 30, null, 2, 3, 1000),
+    R('r6', 'i4', 'd2', 'alternative', 40, null, 2, 3, 1750, { allowed_product_ids: ['p3'] }),
   ],
 };
 
 const b = await chromium.launch(); const errs = []; const fails = [];
 const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? 'ok   ' : 'FAIL ') + msg); };
-async function page(url, vp = { width: 390, height: 844 }, { pickerOff = false } = {}) {
+async function page(url, vp = { width: 390, height: 844 }, { pickerOff = false, allowedOff = false } = {}) {
   const ctx = await b.newContext({ viewport: vp });
   await ctx.route('https://tinydose.test/**', r => { const p = new URL(r.request().url()).pathname; const f = path.join(ROOT, p.endsWith('/') ? p + 'index.html' : p); if (!fs.existsSync(f)) return r.fulfill({ status: 404, body: '' }); r.fulfill({ status: 200, contentType: MIME[path.extname(f)] || 'application/octet-stream', body: fs.readFileSync(f) }); });
   // pickerOff: serve config.js with DB_PICKER = false, to test the switch whatever its current value
-  if (pickerOff) await ctx.route('https://tinydose.test/config.js*', r => r.fulfill({ status: 200, contentType: 'text/javascript',
-    body: fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8').replace(/window\.DB_PICKER = (true|false);/, 'window.DB_PICKER = false;') }));
+  // allowedOff: serve config.js with ALLOWED_SYRUPS = false (all preparations offered)
+  if (pickerOff || allowedOff) await ctx.route('https://tinydose.test/config.js*', r => { let js = fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8');
+    if (pickerOff) js = js.replace(/window\.DB_PICKER = (true|false);/, 'window.DB_PICKER = false;');
+    if (allowedOff) js = js.replace(/window\.ALLOWED_SYRUPS = (true|false);/, 'window.ALLOWED_SYRUPS = false;');
+    r.fulfill({ status: 200, contentType: 'text/javascript', body: js }); });
   await ctx.route('https://cdn.jsdelivr.net/**', r => r.fulfill({ status: 200, contentType: 'text/javascript', body: 'var self=globalThis;' + umd + '\nexport const createClient = supabase.createClient;' }));
   await ctx.route('https://fonts.googleapis.com/**', r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   await ctx.route('https://orvizmgloskvqfsralxc.supabase.co/**', route => {
@@ -203,18 +207,19 @@ check(kb.b <= kb.h, `search: first result visible above the keyboard (${JSON.str
 p = await page('https://tinydose.test/?db=1');
 check(await p.evaluate(() => { const t = document.querySelector('.ff-calc-title'); return !!t && t.nextElementSibling?.id === 'result-area' && t.textContent.includes('פירוט חישוב המינון'); }), 'experiment page: "פירוט חישוב המינון" title above the details');
 
-// 10. Allowed syrups per option (experiment ?exp=1): r2 allows only Augmentin ES
-for (const [url, exp] of [['https://tinydose.test/?db=1', false], ['https://tinydose.test/?db=1&exp=1', true]]) {
-  p = await page(url);
-  await p.click('#dbp-open'); await p.click('[data-cat="c1"]'); await p.click('[data-ind="i1"]'); await p.click('[data-rec="r2"]');
+// 10. Allowed preparations per option: r6 allows only Augmentin ES.
+// Switch off → all; ?exp=1 → filtered even when off; switch as in config.js (on since 2026-10-26) → filtered
+for (const [url, exp, allowedOff] of [['https://tinydose.test/?db=1', false, true], ['https://tinydose.test/?db=1&exp=1', true, true], ['https://tinydose.test/', true, false]]) {
+  p = await page(url, undefined, { allowedOff });
+  await p.click('#dbp-open'); await p.click('[data-cat="c2"]'); await p.click('[data-ind="i4"]'); await p.click('[data-rec="r6"]');
   const radios = await p.$$eval('input[name=dbp-prod]', a => a.map(x => x.value));
   const note = (await txt(p, '#dbp-body')).includes('מוצגים רק התכשירים המתאימים');
-  if (exp) check(radios.join() === 'p3' && note, `?exp=1: only the allowed syrup offered (${radios})`);
-  else check(radios.length === 2 && !note, `without ?exp=1: all syrups as before (${radios})`);
+  if (exp) check(radios.join() === 'p3' && note, `${url}: only the allowed preparation offered (${radios})`);
+  else check(radios.length === 2 && !note, `switch off: all preparations (${radios})`);
   await p.click('#dbp-ok'); await p.waitForTimeout(100);
   const chips = await p.$$eval('#dbp-picked [data-prod]', a => a.map(x => x.dataset.prod));
-  if (exp) check(chips.length === 0 && (await val(p, 'ff-drug')).includes('אוגמנטין ES') && await val(p, 'ff-conc-mg') === '600', `?exp=1: filled with ES, no switch to other syrups (${chips})`);
-  else check(chips.length === 2, 'without ?exp=1: both syrup buttons in the panel');
+  if (exp) check(chips.length === 0 && (await val(p, 'ff-drug')).includes('אוגמנטין ES') && await val(p, 'ff-conc-mg') === '600', `${url}: filled with ES, no switch to other preparations (${chips})`);
+  else check(chips.length === 2, 'switch off: both preparation buttons in the panel');
 }
 // An option whose allowed syrups list is empty or unknown still offers all
 p = await page('https://tinydose.test/?db=1&exp=1');

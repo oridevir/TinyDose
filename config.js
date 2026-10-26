@@ -25,3 +25,8 @@ if (!window.SHOW_DEV_BANNER) {
 // false: hidden. A preview is still possible with ?db=1 in the address.
 // Visitors see verified options only (Supabase rule); a signed-in admin also sees drafts.
 window.DB_PICKER = true;
+
+// ALLOWED_SYRUPS — in "בחירה מהמאגר", offer only the preparations marked for the
+// chosen option (recommendations.allowed_product_ids; empty = all of the drug's).
+// false: all preparations of the drug, in every diagnosis. A preview is possible with ?exp=1.
+window.ALLOWED_SYRUPS = true;
