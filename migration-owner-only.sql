@@ -1,0 +1,43 @@
+-- עריכת המאגר מותרת רק למשתמש של אורי (2026-10-26).
+-- קודם: כל משתמש מחובר (auth.role() = 'authenticated'). הקריאה לא משתנה.
+-- ביטול: להריץ את migration-owner-only-rollback.sql
+begin;
+drop policy "Auth insert categories" on public.categories;
+drop policy "Auth update categories" on public.categories;
+drop policy "Auth delete categories" on public.categories;
+create policy "Owner insert categories" on public.categories for insert with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner update categories" on public.categories for update using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid) with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner delete categories" on public.categories for delete using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+drop policy "Auth insert drugs" on public.drugs;
+drop policy "Auth update drugs" on public.drugs;
+drop policy "Auth delete drugs" on public.drugs;
+create policy "Owner insert drugs" on public.drugs for insert with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner update drugs" on public.drugs for update using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid) with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner delete drugs" on public.drugs for delete using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+drop policy "Auth insert indications" on public.indications;
+drop policy "Auth update indications" on public.indications;
+drop policy "Auth delete indications" on public.indications;
+create policy "Owner insert indications" on public.indications for insert with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner update indications" on public.indications for update using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid) with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner delete indications" on public.indications for delete using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+drop policy "Auth insert products" on public.products;
+drop policy "Auth update products" on public.products;
+drop policy "Auth delete products" on public.products;
+create policy "Owner insert products" on public.products for insert with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner update products" on public.products for update using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid) with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner delete products" on public.products for delete using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+drop policy "Auth insert recommendations" on public.recommendations;
+drop policy "Auth update recommendations" on public.recommendations;
+drop policy "Auth delete recommendations" on public.recommendations;
+create policy "Owner insert recommendations" on public.recommendations for insert with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner update recommendations" on public.recommendations for update using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid) with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner delete recommendations" on public.recommendations for delete using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+drop policy "Auth insert" on public.medications;
+drop policy "Auth update" on public.medications;
+drop policy "Auth delete" on public.medications;
+create policy "Owner insert medications" on public.medications for insert with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner update medications" on public.medications for update using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid) with check ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+create policy "Owner delete medications" on public.medications for delete using ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid);
+drop policy "Read verified or auth recommendations" on public.recommendations;
+create policy "Read verified or owner recommendations" on public.recommendations for select using (status = 'verified' or ((select auth.uid()) = '2986b014-4cfe-4aba-a17b-cf8c3f393a49'::uuid));
+commit;
