@@ -36,6 +36,7 @@ button.logo-about { border: 0; background: none; padding: 0; font: inherit; curs
 .about-body ol li { counter-increment: s; margin: 0 0 5px; text-wrap: pretty; }
 .about-body ol li::before { content: counter(s); display: inline-block; width: 22px; height: 22px; line-height: 22px; border-radius: 50%;
   background: #ff5d93; color: #fff; font-family: 'Secular One', sans-serif; font-size: 13px; margin-inline-end: 6px; }
+.about-body .about-note { background: #fff0f5; border: 1.5px solid #ffc2d6; border-radius: 14px; padding: 8px 12px; color: #8e0f42; }
 .about-body .bless { font-family: 'Secular One', sans-serif; color: #c2185b; font-size: 20px; margin: 0; }
 .about-body .about-close { display: block; width: 100%; margin-top: 16px; padding: 12px 16px; font-size: 16px; font-weight: 700; font-family: inherit;
   border: none; border-radius: 999px; color: #fff; cursor: pointer; background: #c2185b; box-shadow: 0 4px 0 #8e0f42; }
@@ -1438,12 +1439,16 @@ function showToast(msg) {
   <div class="about-box" role="dialog" aria-modal="true" aria-labelledby="about-t">
     <div class="about-head"><span class="ico" aria-hidden="true">💊</span><h2 id="about-t" dir="ltr">TinyDose</h2></div>
     <div class="about-body">
-      <p><b dir="ltr">TinyDose</b> היא כלי עזר לרופאים לחישוב מינון תרופות בסירופ לילדים לפי משקל. מזינים את משקל הילד ואת נתוני המינון — או בוחרים תרופה מהמאגר — ומקבלים את הכמות במ״ל לכל מנה, עם פירוט מלא של שלבי החישוב ובדיקה מול המקסימום היומי.</p>
+      <p><b dir="ltr">TinyDose</b> היא כלי עזר לרופאים לחישוב מינון תרופות בסירופ לילדים לפי משקל. היא מחשבת את הכמות במ״ל לכל מנה, מציגה פירוט מלא של שלבי החישוב ובודקת את המינון מול המקסימום היומי.</p>
+      <hr>
+      <h3>📚 מאגר הטיפול המומלץ</h3>
+      <p>לב האפליקציה הוא מאגר ידע מסודר לטיפול תרופתי מומלץ במצבים שכיחים ברפואת הילדים בקהילה. המאגר מאורגן לפי תחום ואבחנה. לכל אבחנה מוצגים קו הטיפול הראשון, החלופות והטיפול באלרגיה לפניצילין. לכל המלצה מופיעים טווח המינון, מספר המנות ביום, משך הטיפול, המקסימום היומי, התכשירים המתאימים, הערות לרופא ולהורים, ומקור ההמלצה.</p>
+      <p>בחירה מהמאגר ממלאת את כל נתוני החישוב בלחיצה אחת.</p>
+      <p class="about-note"><b>חשוב:</b> השימוש באפליקציה אינו מחליף שיקול דעת קליני. האחריות לנכונות המינון היא של הרופא/ה בלבד.</p>
       <p>פרטי המטופל לא נשמרים ולא נשלחים לשום שרת. הם יוצאים מהמכשיר רק כשבוחרים להדפיס או לשלוח להורים.</p>
       <hr>
       <h3>איך משתמשים</h3>
-      <ol><li>מזינים את משקל הילד</li><li>בוחרים תרופה מהמאגר, או מקלידים מינון, מנות ביום, משך וריכוז</li><li>בודקים את התוצאה ואת הפירוט, ומדפיסים או שולחים להורים בוואטסאפ</li></ol>
-      <p>(כלי עזר בלבד — אינו מחליף שיקול דעת קליני. האחריות לנכונות המינון היא של הרופא/ה.)</p>
+      <ol><li>מזינים את משקל הילד</li><li>בוחרים אבחנה וטיפול מהמאגר, או מקלידים את נתוני המינון ידנית</li><li>בודקים את התוצאה ואת הפירוט, ומדפיסים או שולחים להורים בוואטסאפ</li></ol>
       <hr>
       <p>האפליקציה פותחה ע״י <b>ד״ר אורי דביר</b>.<br>כלים רפואיים דיגיטליים נוספים, למטופלים ולקהילה הרפואית, זמינים באתר <a href="https://drdevir.com" target="_blank" rel="noopener" dir="ltr">DrDevir.com</a><span class="sr-only-about"> (נפתח בחלון חדש)</span>.</p>
       <p>לפניות, הצעות והערות: <a href="mailto:TinyDose@DrDevir.com" dir="ltr">TinyDose@DrDevir.com</a></p>
