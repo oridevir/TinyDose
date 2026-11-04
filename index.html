@@ -10,6 +10,37 @@
   <link rel="stylesheet" href="style.css?v=20261025i">
   <script src="config.js?v=20261026a"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
+<style>
+/* ═══ About window (click on the TinyDose logo) ═══ */
+button.logo-about { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; border-radius: 18px; }
+.logo-about .logo-icon { position: relative; }
+.logo-about .logo-icon::after { content: "i"; position: absolute; bottom: -5px; left: -5px; width: 19px; height: 19px; border-radius: 50%;
+  background: #fff; color: #e64a80; font: italic 700 13px/19px Georgia, serif; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s; }
+.logo-about:hover .logo-icon::after, .logo-about:focus-visible .logo-icon::after { transform: scale(1.15); }
+.logo-about:focus-visible { outline: 3px solid #e64a80; outline-offset: 4px; }
+.about-ov, .ff-page > .about-ov { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(30,47,107,.35); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.about-ov[hidden] { display: none; }
+.about-box { width: min(440px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; background: #fff;
+  border: 3px solid #fff; border-radius: 26px; overflow: hidden; box-shadow: 0 24px 60px -20px rgba(30,47,107,.55); }
+.about-head { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 20px; background: #e64a80; color: #fff; }
+.about-head .ico { width: 44px; height: 44px; border-radius: 13px; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.about-head h2 { margin: 0; font-family: 'Fredoka', 'Varela Round', sans-serif; font-size: 26px; font-weight: 700; color: #fff; }
+.about-body { overflow: auto; padding: 18px 22px 22px; text-align: center; font-family: 'Varela Round', -apple-system, 'Segoe UI', Arial, sans-serif;
+  font-size: 16px; line-height: 1.6; color: #1e2f6b; background: linear-gradient(#eaf5ff, #fff 60%); }
+.about-body p { margin: 0 0 10px; text-wrap: pretty; }
+.about-body hr { border: 0; border-top: 1px solid #cfe2f5; margin: 12px 0; }
+.about-body h3 { margin: 0 0 6px; font-size: 16.5px; color: #c2185b; }
+.about-body a { color: #c2185b; font-weight: 700; }
+.about-body ol { margin: 0 0 8px; padding: 0; list-style: none; counter-reset: s; }
+.about-body ol li { counter-increment: s; margin: 0 0 5px; text-wrap: pretty; }
+.about-body ol li::before { content: counter(s); display: inline-block; width: 22px; height: 22px; line-height: 22px; border-radius: 50%;
+  background: #ff5d93; color: #fff; font-family: 'Secular One', sans-serif; font-size: 13px; margin-inline-end: 6px; }
+.about-body .bless { font-family: 'Secular One', sans-serif; color: #c2185b; font-size: 20px; margin: 0; }
+.about-body .about-close { display: block; width: 100%; margin-top: 16px; padding: 12px 16px; font-size: 16px; font-weight: 700; font-family: inherit;
+  border: none; border-radius: 999px; color: #fff; cursor: pointer; background: #c2185b; box-shadow: 0 4px 0 #8e0f42; }
+.about-body .about-close:active { transform: translateY(3px); box-shadow: 0 1px 0 #8e0f42; }
+</style>
 </head>
 <body>
 
@@ -24,13 +55,13 @@
 <div class="dev-banner">🚧 האתר בשלב פיתוח — אין להשתמש בו להחלטות רפואיות בשלב זה 🚧</div>
 
 <header class="app-header">
-  <a href="./" class="logo">
-    <div class="logo-icon">💊</div>
+  <button type="button" class="logo logo-about" onclick="openAbout()" title="אודות TinyDose" aria-label="אודות TinyDose">
+    <div class="logo-icon" aria-hidden="true">💊</div>
     <div>
       <div class="logo-text">TinyDose</div>
       <div class="logo-sub">מינונים לילדים</div>
     </div>
-  </a>
+  </button>
   <div class="catalog-only" style="display:flex;gap:8px;">
     <a href="./?mode=free" class="btn btn-ghost btn-sm">✏️ חישוב חופשי</a>
     <a href="./" class="btn btn-secondary btn-sm">← חזרה</a>
@@ -1402,5 +1433,44 @@ function showToast(msg) {
 }
 </script>
 
+<!-- About window: opens from the TinyDose logo -->
+<div class="about-ov" id="about-ov" hidden>
+  <div class="about-box" role="dialog" aria-modal="true" aria-labelledby="about-t">
+    <div class="about-head"><span class="ico" aria-hidden="true">💊</span><h2 id="about-t" dir="ltr">TinyDose</h2></div>
+    <div class="about-body">
+      <p><b dir="ltr">TinyDose</b> היא כלי עזר לרופאים לחישוב מינון תרופות בסירופ לילדים לפי משקל. מזינים את משקל הילד ואת נתוני המינון — או בוחרים תרופה מהמאגר — ומקבלים את הכמות במ״ל לכל מנה, עם פירוט מלא של שלבי החישוב ובדיקה מול המקסימום היומי.</p>
+      <p>פרטי המטופל לא נשמרים ולא נשלחים לשום שרת. הם יוצאים מהמכשיר רק כשבוחרים להדפיס או לשלוח להורים.</p>
+      <hr>
+      <h3>איך משתמשים</h3>
+      <ol><li>מזינים את משקל הילד</li><li>בוחרים תרופה מהמאגר, או מקלידים מינון, מנות ביום, משך וריכוז</li><li>בודקים את התוצאה ואת הפירוט, ומדפיסים או שולחים להורים בוואטסאפ</li></ol>
+      <p>(כלי עזר בלבד — אינו מחליף שיקול דעת קליני. האחריות לנכונות המינון היא של הרופא/ה.)</p>
+      <hr>
+      <p>האפליקציה פותחה ע״י <b>ד״ר אורי דביר</b>.<br>כלים רפואיים דיגיטליים נוספים, למטופלים ולקהילה הרפואית, זמינים באתר <a href="https://drdevir.com" target="_blank" rel="noopener" dir="ltr">DrDevir.com</a><span class="sr-only-about"> (נפתח בחלון חדש)</span>.</p>
+      <p>לפניות, הצעות והערות: <a href="mailto:TinyDose@DrDevir.com" dir="ltr">TinyDose@DrDevir.com</a></p>
+      <hr>
+      <p class="bless">בריאות שלמה!</p>
+      <button type="button" class="about-close" id="about-close">סגירה</button>
+    </div>
+  </div>
+</div>
+<style>.sr-only-about{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}</style>
+<script>
+(function () {
+  var ov = document.getElementById('about-ov'), opener = null, downOnBackdrop = false;
+  window.openAbout = function () {
+    opener = document.activeElement;
+    ov.hidden = false;
+    document.getElementById('about-close').focus({ preventScroll: true });
+    ov.querySelector('.about-body').scrollTop = 0;
+  };
+  function closeAbout() { ov.hidden = true; if (opener && opener.focus) opener.focus(); }
+  document.getElementById('about-close').addEventListener('click', closeAbout);
+  // Close on the backdrop only when the click both started and ended there
+  // (selecting text and releasing outside must not close the window)
+  ov.addEventListener('mousedown', function (e) { downOnBackdrop = e.target === ov; });
+  ov.addEventListener('click', function (e) { if (e.target === ov && downOnBackdrop) closeAbout(); downOnBackdrop = false; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !ov.hidden) closeAbout(); });
+})();
+</script>
 </body>
 </html>
