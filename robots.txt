@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /tests/
+Disallow: /calculator.html
+Sitemap: https://tinydose.drdevir.com/sitemap.xml
