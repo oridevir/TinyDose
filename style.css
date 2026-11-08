@@ -40,19 +40,6 @@ body {
   flex-direction: column;
 }
 
-/* ── Dev banner ── */
-.dev-banner {
-  background: #FEF3C7;
-  border-bottom: 3px solid #F59E0B;
-  color: var(--gray-900);
-  text-align: center;
-  font-size: 1.05rem;
-  font-weight: 600;
-  padding: 10px 16px;
-}
-
-.hide-dev-banner .dev-banner { display: none; }
-
 /* ── Layout ── */
 .credit {
   text-align: center;

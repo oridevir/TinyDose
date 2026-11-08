@@ -12,14 +12,6 @@ if (window.FREE_CALC_ONLY) {
   document.documentElement.classList.add('free-calc-only');
 }
 
-// SHOW_DEV_BANNER — the "site under development" strip at the top of every page.
-// true: shown.  false: hidden (the banner stays in the pages, ready to return).
-window.SHOW_DEV_BANNER = false;
-
-if (!window.SHOW_DEV_BANNER) {
-  document.documentElement.classList.add('hide-dev-banner');
-}
-
 // DB_PICKER — the "📚 בחירה מהמאגר" button in the free calculation (db-picker.js):
 // browse the drug database and fill the calculation fields from a chosen option.
 // false: hidden. A preview is still possible with ?db=1 in the address.
