@@ -48,7 +48,9 @@ body {
   padding: 0 16px 10px;
   background: #fff;
 }
-.credit a { color: var(--primary); text-decoration: none; }
+.credit a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; } /* קישור בתוך טקסט — מובחן גם בלי צבע */
+.a11y-statement { white-space: nowrap; }
+.a11y-sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 footer .credit-footer { background: transparent; padding: 0 0 8px; }
 .top-warning {
   margin: 4px auto 6px;
