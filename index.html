@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Secular+One&family=Varela+Round&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261108a">
+  <link rel="stylesheet" href="style.css?v=20261114a">
   <script src="config.js?v=20261108a"></script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
 <style>
@@ -1389,7 +1389,10 @@ function openParentsSheet(kind, ctx, done) {
   const notes = $('pp-notes'), amount = $('pp-amount'), ok = $('pp-ok');
   notes.value = parentsDraft.notes;
   notes.addEventListener('input', () => { parentsDraft.notes = notes.value; });
-  const close = () => ov.remove();
+  // Esc סוגר את החלון, כמו "ביטול" (נגישות, נובמבר 2026)
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
+  document.addEventListener('keydown', onKey);
   // → the amount to use; null (no amount needed) or not ok until the slider was moved
   const check = () => {
     if (!amount) return { ok: true, amount: null };
@@ -1414,7 +1417,10 @@ function openParentsSheet(kind, ctx, done) {
   }
   refresh();
   $('pp-cancel').onclick = close;
-  ov.addEventListener('click', e => { if (e.target === ov) close(); });
+  // נסגר בלחיצה על הרקע רק אם גם הלחיצה התחילה על הרקע — אחרת סימון טקסט בגרירה החוצה סוגר את החלון והטקסט אובד
+  let downOnBg = false;
+  ov.addEventListener('mousedown', e => { downOnBg = e.target === ov; });
+  ov.addEventListener('click', e => { if (e.target === ov && downOnBg) close(); downOnBg = false; });
   ok.onclick = () => {
     const c = check();
     if (!c.ok) return;

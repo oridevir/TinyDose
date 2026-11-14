@@ -661,9 +661,9 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff-page {
   --sky: #dff0ff;
   --navy: #1e2f6b;
-  --pink: #ff5d93;
+  --pink: #f75a8e;   /* נובמבר 2026, נגישות: היה #ff5d93 — כהה ב-3% כדי שטקסט לבן מודגש 19px יעבור 3:1 */
   --pink-dark: #e64a80;
-  --bubble: #2b9df4;
+  --bubble: #2998ec; /* נובמבר 2026, נגישות: היה #2b9df4 — כהה ב-3%, מאותה סיבה */
   background-color: var(--sky);
   color: var(--navy);
 }
@@ -704,7 +704,7 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
 .ff-cloud { background: #f1eaff; border-radius: 28px; padding: 14px 16px; box-shadow: 0 6px 0 #c3dcf5; }
-.ff-cloud-title { font-size: 0.85rem; color: #6b7bb3; margin-bottom: 8px; text-align: center; }
+.ff-cloud-title { font-size: 0.85rem; color: #5a6898; margin-bottom: 8px; text-align: center; }
 .ff-who { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ff-who input { border: 2px solid #e2d6fb; border-radius: 16px; padding: 9px 12px; background: #fff; font-size: 0.95rem; min-width: 0; text-align: center; }
 .ff-who input:focus { border-color: var(--bubble); }
@@ -737,7 +737,7 @@ input[type=number] { direction: ltr; text-align: right; }
    left), even on this RTL page. Each number sits at its true position, inset
    by the thumb radius so it lines up with the thumb's center. */
 .ff-slider input[type=range] { direction: ltr; }
-.ff-ticks { position: relative; height: 1.2em; margin: 0 10px; font-size: 0.75rem; color: #6b7bb3; direction: ltr; }
+.ff-ticks { position: relative; height: 1.2em; margin: 0 10px; font-size: 0.75rem; color: #5a6898; direction: ltr; }
 .ff-ticks span { position: absolute; top: 0; transform: translateX(-50%); }
 
 .ff-pill { border-radius: 26px; padding: 12px 18px 14px; display: flex; flex-direction: column; gap: 8px; text-align: center; }
@@ -758,7 +758,7 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff-pair { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 1.05rem; }
 .ff-pair input { width: 92px; border: 2px solid transparent; border-radius: 999px; background: #fff; padding: 9px 6px; font-size: 1.15rem; }
 .ff-pair input:focus { border-color: var(--bubble); outline: none; }
-.ff-hint { font-size: 0.78rem; color: #6b7bb3; margin: -2px 0 0; min-height: 0; text-align: center; }
+.ff-hint { font-size: 0.78rem; color: #5a6898; margin: -2px 0 0; min-height: 0; text-align: center; }
 .ff-hint:empty { display: none; }
 
 .ff-bubble {
@@ -790,7 +790,7 @@ input[type=number] { direction: ltr; text-align: right; }
   .ff-wave { animation: none; }
 }
 
-.ff-placeholder { background: rgba(255,255,255,.7); border: 2px dashed #b9d7f3; border-radius: 22px; padding: 18px; text-align: center; color: #6b7bb3; font-family: 'Varela Round', sans-serif; font-size: 0.92rem; }
+.ff-placeholder { background: rgba(255,255,255,.7); border: 2px dashed #b9d7f3; border-radius: 22px; padding: 18px; text-align: center; color: #5a6898; font-family: 'Varela Round', sans-serif; font-size: 0.92rem; }
 
 .ff-page #result-area { margin-top: 16px; }
 .ff-page .result-card { border-radius: 26px; }
@@ -828,9 +828,9 @@ input[type=number] { direction: ltr; text-align: right; }
 .ff-seg button[aria-pressed="true"] { background: #fff; color: #1667c4; font-weight: 700; box-shadow: 0 1px 3px rgba(30,47,107,.15); }
 .ff-round-opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .ff-opt { font: inherit; color: var(--navy); background: #f6faff; border: 2.5px solid #e2ecfb; border-radius: 18px; padding: 10px 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
-.ff-opt .dir { font-size: .78rem; color: #6b7bb3; }
+.ff-opt .dir { font-size: .78rem; color: #5a6898; }
 .ff-opt .ml { font-family: 'Secular One', 'Fredoka', sans-serif; font-size: 1.35rem; line-height: 1.15; }
-.ff-opt .mgk, .ff-opt .pct { font-size: .72rem; color: #6b7bb3; text-align: center; }
+.ff-opt .mgk, .ff-opt .pct { font-size: .72rem; color: #5a6898; text-align: center; }
 .ff-opt .pct { font-weight: 700; }
 .ff-opt.is-outside .pct { color: #8a5a00; }
 .ff-opt[aria-pressed="true"] { border-color: #1667c4; background: #eaf5ff; }
@@ -852,7 +852,7 @@ input[type=number] { direction: ltr; text-align: right; }
 .dbp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .dbp-chips button { border: 2px solid #dcf5e4; background: #fff; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .88rem; cursor: pointer; color: inherit; }
 .dbp-chips button[aria-pressed="true"] { background: #dcf5e4; border-color: #4caf7a; font-weight: 700; }
-.dbp-src { font-size: .8rem; color: #6b7bb3; }
+.dbp-src { font-size: .8rem; color: #5a6898; }
 .dbp-draft { display: inline-block; background: #fff1c2; color: #8a6100; border-radius: 999px; padding: 1px 8px; font-size: .78rem; font-weight: 700; }
 .dbp-dnote { background: #f3f8ff; border-radius: 12px; padding: 8px 10px; font-size: .88rem; line-height: 1.5; white-space: pre-line; }
 .dbp-warn { background: #fff7e0; border-radius: 12px; padding: 8px 10px; font-size: .88rem; }
@@ -867,7 +867,7 @@ body.dbp-open { overflow: hidden; }
    (.ff-page > *:not(.sky) { position: relative }). The window must stay fixed over the page. */
 .ff-page > .dbp-overlay { position: fixed; z-index: 50; }
 .dbp-sheet {
-  --peach: #ffe6dc; --yellow: #fff1c2; --green: #dcf5e4; --lilac: #ece1ff; --blue: #d9edff;
+  --peach: #ffe6dc; --yellow: #fff1c2; --green: #dcf5e4; --lilac: #ece1ff; --blue: #cbeef6; /* נובמבר 2026, בחירת אורי: היה #d9edff — נבלע ברקע השמיים */
   --peach-ink: #e0784f; --yellow-ink: #c99a00; --green-ink: #2f9e5b; --lilac-ink: #8a5cf0; --blue-ink: #2b9df4;
   position: relative; margin-top: var(--dbp-top, 0px);
   width: 100%; height: var(--dbp-h, 100dvh); max-height: var(--dbp-h, 100dvh);
@@ -887,7 +887,7 @@ body.dbp-open { overflow: hidden; }
 .dbp-search[hidden] { display: none; }
 .dbp-search:focus-within { border-color: #2b9df4; }
 #dbp-q { flex: 1; min-width: 0; border: none; outline: none; background: transparent; padding: 12px 0; font: inherit; font-size: 1.05rem; color: inherit; }
-.dbp-crumbs { font-size: .85rem; color: #6b7bb3; text-align: center; }
+.dbp-crumbs { font-size: .85rem; color: #5a6898; text-align: center; }
 .dbp-crumbs[hidden] { display: none; }
 .dbp-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 6px 14px 24px; display: flex; flex-direction: column; gap: 10px; }
 
@@ -902,8 +902,8 @@ body.dbp-open { overflow: hidden; }
 .dbp-c-lilac { background: var(--lilac); } .dbp-c-blue { background: var(--blue); }
 
 .dbp-title { border-radius: 22px; padding: 12px 16px; text-align: center; font-family: 'Fredoka', 'Varela Round', sans-serif; font-weight: 700; font-size: 1.25rem; }
-.dbp-hint { text-align: center; font-size: .85rem; color: #6b7bb3; margin-top: -2px; }
-.dbp-sec { font-size: .9rem; color: #6b7bb3; margin: 6px 4px -2px; }
+.dbp-hint { text-align: center; font-size: .85rem; color: #5a6898; margin-top: -2px; }
+.dbp-sec { font-size: .9rem; color: #5a6898; margin: 6px 4px -2px; }
 .dbp-list { display: flex; flex-direction: column; gap: 8px; }
 /* Diagnoses and drugs: white pills */
 .dbp-pill { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; text-align: right; background: #fff; border: none; border-inline-start: 6px solid #bfe0fb; border-radius: 20px; padding: 14px 16px; font: inherit; font-size: 1.08rem; color: #1e2f6b; cursor: pointer; box-shadow: 0 4px 0 #c3dcf5; }
@@ -917,12 +917,12 @@ body.dbp-open { overflow: hidden; }
 .dbp-line-first { background: var(--green); color: #1f7a43; }
 .dbp-line-alternative { background: var(--yellow); color: #8a6100; }
 .dbp-line-allergy { background: var(--peach); color: #b4532c; }
-.dbp-sub { font-size: .84rem; color: #6b7bb3; }
+.dbp-sub { font-size: .84rem; color: #5a6898; }
 
 /* The chosen option: everything in one screen */
 .dbp-hero { background: #fff; border-radius: 26px; padding: 16px; text-align: center; box-shadow: 0 5px 0 #c3dcf5; }
 .dbp-hero-name { font-family: 'Fredoka', 'Varela Round', sans-serif; font-weight: 700; font-size: 1.6rem; color: #ff5d93; line-height: 1.2; }
-.dbp-hero-en { color: #6b7bb3; font-size: .9rem; }
+.dbp-hero-en { color: #5a6898; font-size: .9rem; }
 .dbp-hero-sub { margin-top: 6px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; font-size: .95rem; }
 .dbp-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dbp-fact { border-radius: 22px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1px; }
@@ -939,11 +939,11 @@ body.dbp-open { overflow: hidden; }
 .dbp-syrup input { margin: 0; width: 20px; height: 20px; accent-color: var(--green-ink); }
 .dbp-syrup-name { flex: 1; font-weight: 700; }
 .dbp-syrup-conc { font-size: .88rem; color: #2f6b4a; }
-.dbp-src { font-size: .8rem; color: #6b7bb3; text-align: center; }
+.dbp-src { font-size: .8rem; color: #5a6898; text-align: center; }
 .dbp-fill-bar { position: sticky; bottom: -24px; margin: 4px -14px -24px; padding: 12px 14px 16px; background: linear-gradient(rgba(223,240,255,0), #dff0ff 30%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .dbp-fill { width: 100%; max-width: 420px; border: none; border-radius: 999px; padding: 15px 20px; background: #ff5d93; color: #fff; font: inherit; font-family: 'Fredoka', 'Varela Round', sans-serif; font-weight: 700; font-size: 1.2rem; cursor: pointer; box-shadow: 0 5px 0 #e64a80; }
 .dbp-fill:active { transform: translateY(2px); box-shadow: 0 3px 0 #e64a80; }
-.dbp-fill-note { font-size: .8rem; color: #6b7bb3; text-align: center; }
+.dbp-fill-note { font-size: .8rem; color: #5a6898; text-align: center; }
 .dbp-note { background: #fff7e0; border-radius: 16px; padding: 9px 12px; font-size: .85rem; }
 .dbp-msg { text-align: center; padding: 28px 8px; color: #4a5680; }
 .dbp-err { color: #b42318; }
@@ -960,7 +960,7 @@ body.dbp-open { overflow: hidden; }
 .pp-amount input[type=range] { width: 100%; height: 30px; accent-color: #ff5d93; direction: ltr; margin: 0; }
 .pp-amount input[type=range]:focus { outline: none; }
 .pp-amount input[type=range]:focus-visible { outline: 2px solid #ff5d93; outline-offset: 4px; border-radius: 6px; }
-.pp-scale { display: flex; justify-content: space-between; font-size: .8rem; color: #6b7bb3; margin-top: -4px; }
+.pp-scale { display: flex; justify-content: space-between; font-size: .8rem; color: #5a6898; margin-top: -4px; }
 .pp-hint { margin: 0; font-size: .84rem; color: #4a5680; }
 .pp-msg { margin: 0; border-radius: 14px; padding: 8px 12px; font-size: .86rem; background: #fff; line-height: 1.5; }
 .pp-msg[hidden] { display: none; }
@@ -969,3 +969,30 @@ body.dbp-open { overflow: hidden; }
 .pp-sheet textarea:focus { border-color: #2b9df4; outline: none; }
 .pp-actions { display: flex; gap: 10px; justify-content: center; margin-top: 4px; }
 .pp-actions .btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* ══ נגישות — ניגודיות (נובמבר 2026, אישור אורי: "הצעה ג'") ══
+   העיקרון: הרקעים הבהירים נשארים; טקסט לבן עליהם — מודגש ובגודל 19px ("טקסט גדול" = רף 3:1),
+   והוורוד/הכחול כהים ב-3% בלבד (2.9 → 3.1). טקסטים קטנים — באותו גוון, כהה יותר (4.5:1).
+   לפני שינוי צבע או גודל כאן — למדוד ניגודיות מחדש. */
+.ff-balloon label, .ff-balloon span { font-size: 19px; font-weight: 700; }
+.ff-balloon::before { top: 13px; right: 46px; width: 18px; height: 28px; } /* מעל "משקל הילד" ובתוך גבולות הבלון */
+.dbp-open-btn { font-size: 19px; font-weight: 700; }
+.ff-bubble small, .ff-bubble-text > small:first-child { font-size: 19px; font-weight: 700; }
+#ff-live-sub { opacity: 1; color: #fff; }
+.ff-page .result-header, .ff-page .result-header * { font-weight: 700; }
+.ff-page .result-drug, .ff-page .result-indication { font-size: 19px; opacity: 1; }
+.ff-page .calc-step .step-label { font-size: 19px; }
+.ff-page .logo-text { color: #ff3478; }      /* בחירת אורי: הבהיר ביותר שעובר 3:1 על השמיים (היה #ff5d93, 2.49) */
+.ff-calc-title { color: #e8256a; } /* יושבת בחלקה על הצל הכחלחל של הכרטיס שמעליה — צריך מעט יותר כהה מהלוגו */
+.ff-page .warning-box > div { color: #c81e1e; }
+.ff-page .credit a, .credit-footer a, .a11y-statement { color: #ba3b67; }
+.ff-cloud-title, .ff-ticks, .ff-hint, .ff-placeholder { color: #5a6898; }
+#share-btn.act-share, #pp-ok.act-share { background: #1da851; font-weight: 700; font-size: 19px; } /* לבן על #25d366 היה 2.0 */
+#share-btn.act-share:hover, #pp-ok.act-share:hover { background: #18913f; }
+.ff-opt .dir, .ff-opt .mgk, .ff-opt .pct { color: #5a6898; } /* עיגול המנה — היה #6b7bb3, 3.9 */
+/* חלון "בחירה מהמאגר" וחלון "הכנה להורים" — אותם כללים */
+.dbp-head h2, .dbp-hero-name, .pp-sheet h2 { color: #e8256a; }  /* היה #ff5d93 — 2.49 על השמיים */
+.dbp-go { color: #d81b60; }
+.dbp-fill { background: var(--pink); font-size: 19px; }
+.pp-value span { color: #c2185b; }
+.dbp-line-allergy { color: #9a4421; } /* היה #b4532c — 4.17 על האפרסק */
